@@ -22,7 +22,7 @@ import { EvidenceItem, AgentRun, Ticket } from '@/types';
  */
 function normalizeToolParams(toolName: string, params: Record<string, any>): Record<string, any> {
   const p = { ...params };
-  // Common snake_case → camelCase mappings
+  // Common snake_case -> camelCase mappings
   if ('user_id' in p && !('userId' in p)) { p.userId = p.user_id; delete p.user_id; }
   if ('ticket_id' in p && !('ticketId' in p)) { p.ticketId = p.ticket_id; delete p.ticket_id; }
   if ('service_name' in p && !('serviceName' in p)) { p.serviceName = p.service_name; delete p.service_name; }
@@ -81,7 +81,7 @@ export async function runAgentInvestigation(
 
   // Pre-loop evidence bootstrap: always seed the knowledge base as the first evidence item
   // if it hasn't been consulted yet. This is analogous to how RAG context is retrieved
-  // pre-loop — it ensures the LLM always has runbook context before reasoning.
+  // pre-loop â€” it ensures the LLM always has runbook context before reasoning.
   // The LLM remains fully autonomous for all subsequent decisions.
   const kbAlreadyInEvidence = currentRun.evidence.some((e) => e.source === 'search_knowledge_base');
   if (!kbAlreadyInEvidence) {
@@ -211,7 +211,7 @@ export async function runAgentInvestigation(
       await addTicketMessage(
         ticketId,
         'AGENT',
-        `⚠️ AutoDesk AI requires human authorization before executing action '${decision.tool_name}'.\nReason: ${decision.reasoning_summary}\nDiagnosis: ${decision.diagnosis || 'Root cause identified.'}`,
+        `âš ï¸ AutoDesk AI requires human authorization before executing action '${decision.tool_name}'.\nReason: ${decision.reasoning_summary}\nDiagnosis: ${decision.diagnosis || 'Root cause identified.'}`,
         'agent_ai',
         'AutoDesk AI Agent'
       );
@@ -231,7 +231,8 @@ export async function runAgentInvestigation(
 
     // 3. Handle Stop Condition: Ticket Resolved
     if (decision.status === 'resolved') {
-      if (decision.tool_name === 'close_ticket') {
+      if (!decision.tool_name || decision.tool_name === 'none' || decision.tool_name === 'close_ticket') {
+        decision.tool_name = 'close_ticket';
         const closeParams = normalizeToolParams('close_ticket', decision.tool_params || {});
         // Ensure required fields always have valid values
         if (!closeParams.resolutionSummary || closeParams.resolutionSummary.length < 5) {
@@ -309,12 +310,12 @@ export async function runAgentInvestigation(
 
     // 5. Execute Next Tool Call
     if (decision.tool_name) {
-      // GUARD: Prevent tool deduplication — do not re-execute a tool already in evidence.
+      // GUARD: Prevent tool deduplication â€” do not re-execute a tool already in evidence.
       // This stops the model looping on the same tool (e.g. check_system_status x3).
       const alreadyRun = currentRun.evidence.some((e) => e.source === decision.tool_name);
       if (alreadyRun) {
         console.log(`[AGENT:${ticketId}] Step ${step} | GUARD: Tool '${decision.tool_name}' already in evidence. Skipping duplicate execution.`);
-        // Still loop — let the next step's LLM call pick a different tool
+        // Still loop â€” let the next step's LLM call pick a different tool
       } else {
       const toolRes = await executeToolSafely(
         decision.tool_name,
@@ -436,7 +437,7 @@ export async function resumeAgentAfterApproval(
     await addTicketMessage(
       ticketId,
       'AGENT',
-      `❌ Action '${approval.toolName}' was rejected by IT Support. Escalating ticket for manual investigation.`,
+      `âŒ Action '${approval.toolName}' was rejected by IT Support. Escalating ticket for manual investigation.`,
       'agent_ai',
       'AutoDesk AI Agent'
     );
@@ -458,3 +459,4 @@ export async function resumeAgentAfterApproval(
     };
   }
 }
+
