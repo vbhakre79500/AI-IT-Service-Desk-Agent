@@ -9,7 +9,7 @@ export async function GET(
   try {
     const user = await requireAuth(req);
     const { id } = await params;
-    const device = getDeviceStatus(id);
+    const device = await getDeviceStatus(id);
 
     if (!device) {
       return NextResponse.json({ success: false, error: `Device '${id}' not found` }, { status: 404 });

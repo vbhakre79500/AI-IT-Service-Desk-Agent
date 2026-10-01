@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const filterUser = searchParams.get('all') === 'true' && user.role !== 'EMPLOYEE' ? undefined : user.role === 'EMPLOYEE' ? user.id : undefined;
     const status = searchParams.get('status') || undefined;
 
-    const tickets = listTickets({ creatorId: filterUser, status });
+    const tickets = await listTickets({ creatorId: filterUser, status });
 
     return NextResponse.json({
       success: true,
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ticket = createTicket({
+    const ticket = await createTicket({
       creatorId: user.id,
       title: validated.data.title,
       description: validated.data.description,

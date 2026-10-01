@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   try {
     await requireRole('IT_ADMIN', req);
 
-    const logs = listAuditLogs(100);
+    const logs = await listAuditLogs(100);
     return NextResponse.json({
       success: true,
       count: logs.length,

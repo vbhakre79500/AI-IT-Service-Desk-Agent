@@ -15,7 +15,7 @@ export async function GET(
       return forbiddenResponse('Access denied: You can only view your own account information.');
     }
 
-    const account = getEmployeeAccount(id);
+    const account = await getEmployeeAccount(id);
 
     if (!account) {
       return NextResponse.json({ success: false, error: `Account '${id}' not found` }, { status: 404 });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resumeAgentAfterApproval } from '@/lib/agent/orchestrator';
 import { requireAuth, forbiddenResponse, handleAuthError } from '@/lib/auth/server';
 import { canApproveRiskLevel } from '@/lib/auth/rbac';
-import { getDatabase } from '@/lib/db';
+import { getApprovalById } from '@/lib/db/queries';
 
 export async function POST(
   req: NextRequest,
@@ -13,8 +13,7 @@ export async function POST(
     const user = await requireAuth(req);
 
     // Check approval record
-    const db = getDatabase();
-    const appr = db.prepare('SELECT * FROM approvals WHERE id = ?').get(approvalId) as any;
+    const appr = await getApprovalById(approvalId);
     if (!appr) {
       return NextResponse.json({ success: false, error: 'Approval request not found' }, { status: 404 });
     }

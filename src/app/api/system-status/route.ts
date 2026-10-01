@@ -3,7 +3,7 @@ import { listAllSystemStatuses } from '@/lib/db/queries';
 
 export async function GET() {
   try {
-    const services = listAllSystemStatuses();
+    const services = await listAllSystemStatuses();
     return NextResponse.json({
       success: true,
       count: services.length,

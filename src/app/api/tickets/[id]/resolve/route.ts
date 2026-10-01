@@ -18,7 +18,7 @@ export async function POST(
     const body = await req.json().catch(() => ({}));
     const validated = ResolveSchema.parse(body);
 
-    const ticket = getTicketById(id);
+    const ticket = await getTicketById(id);
     if (!ticket) {
       return NextResponse.json({ success: false, error: 'Ticket not found' }, { status: 404 });
     }
@@ -27,11 +27,11 @@ export async function POST(
       ? `${validated.resolutionSummary} (Verified: ${validated.verificationNotes})`
       : validated.resolutionSummary;
 
-    updateTicketStatus(id, 'RESOLVED', {
+    await updateTicketStatus(id, 'RESOLVED', {
       resolutionSummary: fullSummary,
     });
 
-    addTicketMessage(
+    await addTicketMessage(
       id,
       'SYSTEM',
       `✅ Ticket manually resolved by ${user.name} (${user.role}).\nResolution: ${fullSummary}`,
@@ -39,7 +39,7 @@ export async function POST(
       user.name
     );
 
-    recordAuditLog({
+    await recordAuditLog({
       ticketId: id,
       userId: user.id,
       action: 'TICKET_MANUALLY_RESOLVED',

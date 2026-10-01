@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resumeAgentAfterApproval } from '@/lib/agent/orchestrator';
 import { requireAuth, forbiddenResponse, handleAuthError } from '@/lib/auth/server';
 import { canApproveRiskLevel, hasMinimumRole } from '@/lib/auth/rbac';
-import { getDatabase } from '@/lib/db';
+import { getApprovalById } from '@/lib/db/queries';
 import { z } from 'zod';
 
 const ContinueSchema = z.object({
@@ -25,8 +25,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const db = getDatabase();
-    const appr = db.prepare('SELECT * FROM approvals WHERE id = ?').get(validated.data.approvalId) as any;
+    const appr = await getApprovalById(validated.data.approvalId);
     if (!appr) {
       return NextResponse.json({ success: false, error: 'Approval request not found' }, { status: 404 });
     }

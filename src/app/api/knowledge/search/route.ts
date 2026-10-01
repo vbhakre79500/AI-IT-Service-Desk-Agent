@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const results = searchKnowledgeBase(query, limit);
+    const results = await searchKnowledgeBase(query, limit);
 
     return NextResponse.json({
       success: true,

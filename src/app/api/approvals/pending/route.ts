@@ -15,13 +15,13 @@ export async function GET(req: NextRequest) {
       }
     } else {
       // If a specific ticketId is requested, verify ticket access
-      const ticket = getTicketById(ticketId);
+      const ticket = await getTicketById(ticketId);
       if (ticket && !checkTicketAccess(ticket, user)) {
         return forbiddenResponse('Access denied: You do not have permission to view approvals for this ticket.');
       }
     }
 
-    const approvals = listPendingApprovals(ticketId);
+    const approvals = await listPendingApprovals(ticketId);
 
     return NextResponse.json({
       success: true,

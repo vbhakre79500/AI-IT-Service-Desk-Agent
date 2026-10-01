@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify ticket existence and ownership
-    const ticket = getTicketById(validated.data.ticketId);
+    const ticket = await getTicketById(validated.data.ticketId);
     if (!ticket) {
       return NextResponse.json(
         { success: false, error: 'Ticket not found' },

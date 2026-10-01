@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { ticketId } = await params;
-    const details = getAgentRunDetails(ticketId);
+    const details = await getAgentRunDetails(ticketId);
 
     return NextResponse.json({
       success: true,

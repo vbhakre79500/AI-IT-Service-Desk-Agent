@@ -1,67 +1,88 @@
-import { getDatabase } from './index';
+// Load .env.local before any imports that read process.env (e.g. DATABASE_URL).
+import { loadEnvConfig } from '@next/env';
+loadEnvConfig(process.cwd());
+
+import { getPool, initPostgresSchema } from './index';
 import { SEED_USERS, SEED_EMPLOYEES, SEED_DEVICES } from '../auth/users';
 import { generateEmbedding } from '../rag/embeddings';
 
-export function seedDatabase(): void {
-  const db = getDatabase();
+export async function seedDatabase(pool?: any): Promise<void> {
+  const p = pool || getPool();
 
-  console.log('🌱 Starting enterprise database seeding...');
+  console.log('🌱 Starting enterprise PostgreSQL database seeding...');
+
+  // Ensure schema is created first
+  await initPostgresSchema(p);
 
   // 1. Seed Users
-  const insertUser = db.prepare(`
-    INSERT OR REPLACE INTO users (id, name, email, role, department, avatar_url, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
   for (const u of SEED_USERS) {
-    insertUser.run(u.id, u.name, u.email, u.role, u.department, u.avatarUrl || null, u.createdAt);
+    await p.query(
+      `INSERT INTO users (id, name, email, role, department, avatar_url, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (id) DO UPDATE SET
+         name = EXCLUDED.name,
+         email = EXCLUDED.email,
+         role = EXCLUDED.role,
+         department = EXCLUDED.department,
+         avatar_url = EXCLUDED.avatar_url`,
+      [u.id, u.name, u.email, u.role, u.department, u.avatarUrl || null, u.createdAt]
+    );
   }
   console.log(`✅ Seeded ${SEED_USERS.length} users.`);
 
   // 2. Seed Employee Profiles
-  const insertEmployee = db.prepare(`
-    INSERT OR REPLACE INTO employees (
-      id, user_id, title, manager_email, account_status, mfa_enabled, mfa_synced,
-      failed_login_count, last_password_change, department
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
   for (const emp of SEED_EMPLOYEES) {
-    insertEmployee.run(
-      emp.id,
-      emp.userId,
-      emp.title,
-      emp.managerEmail,
-      emp.accountStatus,
-      emp.mfaEnabled ? 1 : 0,
-      emp.mfaSynced ? 1 : 0,
-      emp.failedLoginCount,
-      emp.lastPasswordChange,
-      emp.department
+    await p.query(
+      `INSERT INTO employees (
+         id, user_id, title, manager_email, account_status, mfa_enabled, mfa_synced,
+         failed_login_count, last_password_change, department
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (id) DO UPDATE SET
+         account_status = EXCLUDED.account_status,
+         mfa_enabled = EXCLUDED.mfa_enabled,
+         mfa_synced = EXCLUDED.mfa_synced,
+         failed_login_count = EXCLUDED.failed_login_count,
+         last_password_change = EXCLUDED.last_password_change`,
+      [
+        emp.id,
+        emp.userId,
+        emp.title,
+        emp.managerEmail,
+        emp.accountStatus,
+        Boolean(emp.mfaEnabled),
+        Boolean(emp.mfaSynced),
+        emp.failedLoginCount,
+        emp.lastPasswordChange,
+        emp.department,
+      ]
     );
   }
   console.log(`✅ Seeded ${SEED_EMPLOYEES.length} employee profiles.`);
 
   // 3. Seed Devices
-  const insertDevice = db.prepare(`
-    INSERT OR REPLACE INTO devices (
-      id, user_id, device_name, os, os_version, compliance_status, disk_free_gb,
-      ip_address, vpn_client_version, last_seen
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
   for (const d of SEED_DEVICES) {
-    insertDevice.run(
-      d.id,
-      d.userId,
-      d.deviceName,
-      d.os,
-      d.osVersion,
-      d.complianceStatus,
-      d.diskFreeGb,
-      d.ipAddress,
-      d.vpnClientVersion || null,
-      d.lastSeen
+    await p.query(
+      `INSERT INTO devices (
+         id, user_id, device_name, os, os_version, compliance_status, disk_free_gb,
+         ip_address, vpn_client_version, last_seen
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (id) DO UPDATE SET
+         compliance_status = EXCLUDED.compliance_status,
+         disk_free_gb = EXCLUDED.disk_free_gb,
+         ip_address = EXCLUDED.ip_address,
+         last_seen = EXCLUDED.last_seen`,
+      [
+        d.id,
+        d.userId,
+        d.deviceName,
+        d.os,
+        d.osVersion,
+        d.complianceStatus,
+        d.diskFreeGb,
+        d.ipAddress,
+        d.vpnClientVersion || null,
+        d.lastSeen,
+      ]
     );
   }
   console.log(`✅ Seeded ${SEED_DEVICES.length} devices.`);
@@ -110,14 +131,18 @@ export function seedDatabase(): void {
     },
   ];
 
-  const insertService = db.prepare(`
-    INSERT OR REPLACE INTO system_status (
-      id, service_name, display_name, status, latency_ms, incident_notes, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-  `);
-
   for (const s of SERVICES) {
-    insertService.run(s.id, s.serviceName, s.displayName, s.status, s.latencyMs, s.incidentNotes);
+    await p.query(
+      `INSERT INTO system_status (
+         id, service_name, display_name, status, latency_ms, incident_notes, updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+       ON CONFLICT (id) DO UPDATE SET
+         status = EXCLUDED.status,
+         latency_ms = EXCLUDED.latency_ms,
+         incident_notes = EXCLUDED.incident_notes,
+         updated_at = CURRENT_TIMESTAMP`,
+      [s.id, s.serviceName, s.displayName, s.status, s.latencyMs, s.incidentNotes]
+    );
   }
   console.log(`✅ Seeded ${SERVICES.length} enterprise system status indicators.`);
 
@@ -180,35 +205,32 @@ Action: When an infrastructure service status reports 'OUTAGE' or 'CRITICAL_DEGR
     },
   ];
 
-  const insertDoc = db.prepare(`
-    INSERT OR REPLACE INTO knowledge_documents (id, title, category, content, created_at)
-    VALUES (?, ?, ?, ?, datetime('now'))
-  `);
-
-  const insertChunk = db.prepare(`
-    INSERT OR REPLACE INTO knowledge_chunks (
-      id, document_id, document_title, category, chunk_index, content, embedding_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
   for (const doc of RUNBOOKS) {
-    insertDoc.run(doc.id, doc.title, doc.category, doc.content);
+    await p.query(
+      `INSERT INTO knowledge_documents (id, title, category, content, created_at)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+       ON CONFLICT (id) DO UPDATE SET
+         title = EXCLUDED.title,
+         category = EXCLUDED.category,
+         content = EXCLUDED.content`,
+      [doc.id, doc.title, doc.category, doc.content]
+    );
 
-    // Chunk by paragraphs/sections
     const paragraphs = doc.content.split(/\n\n+/).filter((p) => p.trim().length > 0);
-    paragraphs.forEach((p, idx) => {
+    for (let idx = 0; idx < paragraphs.length; idx++) {
+      const pText = paragraphs[idx];
       const chunkId = `chk_${doc.id}_${idx}`;
-      const embedding = generateEmbedding(p);
-      insertChunk.run(
-        chunkId,
-        doc.id,
-        doc.title,
-        doc.category,
-        idx,
-        p,
-        JSON.stringify(embedding)
+      const embedding = generateEmbedding(pText);
+      await p.query(
+        `INSERT INTO knowledge_chunks (
+           id, document_id, document_title, category, chunk_index, content, embedding_json
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (id) DO UPDATE SET
+           content = EXCLUDED.content,
+           embedding_json = EXCLUDED.embedding_json`,
+        [chunkId, doc.id, doc.title, doc.category, idx, pText, JSON.stringify(embedding)]
       );
-    });
+    }
   }
   console.log(`✅ Seeded ${RUNBOOKS.length} knowledge documents and parsed chunks.`);
 
@@ -252,48 +274,54 @@ Action: When an infrastructure service status reports 'OUTAGE' or 'CRITICAL_DEGR
     },
   ];
 
-  const insertTicket = db.prepare(`
-    INSERT OR REPLACE INTO tickets (
-      id, ticket_number, creator_id, title, description, category, priority, status,
-      device_id, error_code, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-  `);
-
-  const insertMsg = db.prepare(`
-    INSERT OR REPLACE INTO ticket_messages (
-      id, ticket_id, sender_type, sender_id, sender_name, message, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-  `);
-
   for (const t of DEMO_TICKETS) {
-    insertTicket.run(
-      t.id,
-      t.ticketNumber,
-      t.creatorId,
-      t.title,
-      t.description,
-      t.category,
-      t.priority,
-      t.status,
-      t.deviceId || null,
-      t.errorCode || null
+    await p.query(
+      `INSERT INTO tickets (
+         id, ticket_number, creator_id, title, description, category, priority, status,
+         device_id, error_code, created_at, updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       ON CONFLICT (id) DO UPDATE SET
+         status = EXCLUDED.status,
+         title = EXCLUDED.title,
+         description = EXCLUDED.description`,
+      [
+        t.id,
+        t.ticketNumber,
+        t.creatorId,
+        t.title,
+        t.description,
+        t.category,
+        t.priority,
+        t.status,
+        t.deviceId || null,
+        t.errorCode || null,
+      ]
     );
 
     // Initial message from user
-    insertMsg.run(
-      `msg_init_${t.id}`,
-      t.id,
-      'USER',
-      t.creatorId,
-      t.creatorId === 'usr_emp_01' ? 'Sarah Connor' : 'David Lightman',
-      t.description
+    await p.query(
+      `INSERT INTO ticket_messages (
+         id, ticket_id, sender_type, sender_id, sender_name, message, created_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        `msg_init_${t.id}`,
+        t.id,
+        'USER',
+        t.creatorId,
+        t.creatorId === 'usr_emp_01' ? 'Sarah Connor' : 'David Lightman',
+        t.description,
+      ]
     );
   }
   console.log(`✅ Seeded ${DEMO_TICKETS.length} realistic demo scenario tickets.`);
-  console.log('🎉 Database seeding complete!');
+  console.log('🎉 PostgreSQL database seeding complete!');
 }
 
 // Allow direct CLI execution: npx tsx src/lib/db/seed.ts
 if (require.main === module || process.argv[1]?.includes('seed')) {
-  seedDatabase();
+  seedDatabase().catch((err) => {
+    console.error('❌ Seeding failed:', err);
+    process.exit(1);
+  });
 }

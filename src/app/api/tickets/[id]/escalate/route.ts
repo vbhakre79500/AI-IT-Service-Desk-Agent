@@ -18,16 +18,16 @@ export async function POST(
     const body = await req.json().catch(() => ({}));
     const validated = EscalateSchema.parse(body);
 
-    const ticket = getTicketById(id);
+    const ticket = await getTicketById(id);
     if (!ticket) {
       return NextResponse.json({ success: false, error: 'Ticket not found' }, { status: 404 });
     }
 
-    updateTicketStatus(id, 'ESCALATED', {
+    await updateTicketStatus(id, 'ESCALATED', {
       escalationReason: `[${validated.targetTier}] Manual escalation by ${user.name}: ${validated.reason}`,
     });
 
-    addTicketMessage(
+    await addTicketMessage(
       id,
       'SYSTEM',
       `⚠️ Ticket manually escalated to ${validated.targetTier} by ${user.name} (${user.role}).\nReason: ${validated.reason}`,
@@ -35,7 +35,7 @@ export async function POST(
       user.name
     );
 
-    recordAuditLog({
+    await recordAuditLog({
       ticketId: id,
       userId: user.id,
       action: 'TICKET_MANUALLY_ESCALATED',

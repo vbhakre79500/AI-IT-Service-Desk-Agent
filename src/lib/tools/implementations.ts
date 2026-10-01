@@ -39,7 +39,7 @@ export const searchKnowledgeBaseTool: ToolDefinition = {
   requiresApproval: false,
   enabled: true,
   execute: async ({ query, limit }, _ctx) => {
-    const results = searchKnowledgeBase(query, limit || 3);
+    const results = await searchKnowledgeBase(query, limit || 3);
     return {
       results: results.map((r) => ({
         title: r.documentTitle,
@@ -71,7 +71,7 @@ export const searchPreviousTicketsTool: ToolDefinition = {
   requiresApproval: false,
   enabled: true,
   execute: async ({ category, keyword }, _ctx) => {
-    const all = listTickets();
+    const all = await listTickets();
     const filtered = all.filter((t) => {
       if (category && t.category.toLowerCase() !== category.toLowerCase()) return false;
       if (keyword) {
@@ -117,11 +117,11 @@ export const checkSystemStatusTool: ToolDefinition = {
   enabled: true,
   execute: async ({ serviceName }, _ctx) => {
     const cleanName = serviceName.toLowerCase().trim();
-    let service = getSystemStatus(cleanName);
+    let service = await getSystemStatus(cleanName);
 
     // Flexible fallback match if user asks for "hr portal" or "workday"
     if (!service) {
-      const all = listAllSystemStatuses();
+      const all = await listAllSystemStatuses();
       service = all.find((s) => 
         s.serviceName.includes(cleanName) || 
         s.displayName.toLowerCase().includes(cleanName)
@@ -176,7 +176,7 @@ export const checkUserAccountTool: ToolDefinition = {
   execute: async ({ userId }, ctx) => {
     // If no userId specified, inspect the ticket creator's account
     const targetUserId = userId || ctx.userId;
-    const account = getEmployeeAccount(targetUserId);
+    const account = await getEmployeeAccount(targetUserId);
 
     if (!account) {
       throw new Error(`Account for user '${targetUserId}' not found in enterprise directory.`);
@@ -219,7 +219,7 @@ export const checkDeviceStatusTool: ToolDefinition = {
   enabled: true,
   execute: async ({ deviceId }, ctx) => {
     const targetId = deviceId || ctx.userId;
-    const device = getDeviceStatus(targetId);
+    const device = await getDeviceStatus(targetId);
 
     if (!device) {
       throw new Error(`Device '${targetId}' not found in endpoint management.`);
@@ -295,7 +295,7 @@ export const runDiagnosticsTool: ToolDefinition = {
   enabled: true,
   execute: async ({ diagnosticType, targetResource }, ctx) => {
     if (diagnosticType === 'AUTH_HANDSHAKE') {
-      const account = getEmployeeAccount(ctx.userId);
+      const account = await getEmployeeAccount(ctx.userId);
       if (account?.accountStatus === 'LOCKED') {
         return {
           diagnosticType,
@@ -312,7 +312,7 @@ export const runDiagnosticsTool: ToolDefinition = {
     }
 
     if (diagnosticType === 'VPN_TUNNEL_TEST') {
-      const device = getDeviceStatus(ctx.userId);
+      const device = await getDeviceStatus(ctx.userId);
       if (device?.vpnClientVersion?.includes('outdated')) {
         return {
           diagnosticType,
@@ -358,14 +358,14 @@ export const unlockAccountTool: ToolDefinition = {
   requiresApproval: true,
   enabled: true,
   execute: async ({ userId, reason }, _ctx) => {
-    const account = getEmployeeAccount(userId);
+    const account = await getEmployeeAccount(userId);
     if (!account) {
       throw new Error(`Cannot unlock: user '${userId}' does not exist.`);
     }
 
     const previousStatus = account.accountStatus;
     // Perform state transition
-    updateAccountStatus(userId, 'ACTIVE', 0);
+    await updateAccountStatus(userId, 'ACTIVE', 0);
 
     return {
       userId,
@@ -429,7 +429,7 @@ export const resetPasswordTool: ToolDefinition = {
   requiresApproval: true,
   enabled: true,
   execute: async ({ userId, deliveryMethod }, _ctx) => {
-    updateAccountStatus(userId, 'ACTIVE', 0);
+    await updateAccountStatus(userId, 'ACTIVE', 0);
     return {
       userId,
       deliveryMethod,
@@ -493,7 +493,7 @@ export const createTicketTool: ToolDefinition = {
   requiresApproval: false,
   enabled: true,
   execute: async (data, ctx) => {
-    const t = createTicket({
+    const t = await createTicket({
       creatorId: ctx.userId,
       title: data.title,
       description: data.description,
@@ -522,7 +522,7 @@ export const updateTicketTool: ToolDefinition = {
   requiresApproval: false,
   enabled: true,
   execute: async ({ ticketId, message }, _ctx) => {
-    addTicketMessage(ticketId, 'AGENT', message, 'agent_ai', 'AutoDesk AI Agent');
+    await addTicketMessage(ticketId, 'AGENT', message, 'agent_ai', 'AutoDesk AI Agent');
     return { success: true };
   },
 };
@@ -548,10 +548,10 @@ export const closeTicketTool: ToolDefinition = {
   requiresApproval: false,
   enabled: true,
   execute: async ({ ticketId, resolutionSummary, verificationProof }, _ctx) => {
-    updateTicketStatus(ticketId, 'RESOLVED', {
+    await updateTicketStatus(ticketId, 'RESOLVED', {
       resolutionSummary: `${resolutionSummary} [Verification: ${verificationProof}]`,
     });
-    addTicketMessage(
+    await addTicketMessage(
       ticketId,
       'SYSTEM',
       `✅ Issue successfully resolved by AutoDesk AI.\nSummary: ${resolutionSummary}\nVerification: ${verificationProof}`,
@@ -584,10 +584,10 @@ export const escalateTicketTool: ToolDefinition = {
   requiresApproval: false,
   enabled: true,
   execute: async ({ ticketId, escalationReason, targetTier, evidenceSummary }, _ctx) => {
-    updateTicketStatus(ticketId, 'ESCALATED', {
+    await updateTicketStatus(ticketId, 'ESCALATED', {
       escalationReason: `[${targetTier}] ${escalationReason} (Evidence: ${evidenceSummary})`,
     });
-    addTicketMessage(
+    await addTicketMessage(
       ticketId,
       'SYSTEM',
       `⚠️ Ticket escalated to ${targetTier}.\nReason: ${escalationReason}\nEvidence Dossier: ${evidenceSummary}`,

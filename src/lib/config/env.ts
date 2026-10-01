@@ -20,6 +20,7 @@ const envSchema = z.object({
 
   // Database
   DATABASE_PATH: z.string().default('./data/autodesk.db'),
+  DATABASE_URL: z.string().optional().default(''),
 
   // Authentication & Session
   AUTH_SECRET: z.string().min(16, 'AUTH_SECRET must be at least 16 characters').default('autodesk-secure-session-hackathon-key-2026'),

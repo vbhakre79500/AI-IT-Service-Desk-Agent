@@ -1,4 +1,4 @@
-import { getDatabase } from '../db';
+import { searchKnowledgeBaseChunks } from '../db/queries';
 import { generateEmbedding, cosineSimilarity } from './embeddings';
 import { KnowledgeChunk } from '@/types';
 
@@ -15,15 +15,12 @@ export interface SearchResult {
  * Searches the Knowledge Base using vector cosine similarity augmented with lexical error code boosting.
  * Thresholds at 0.60 to reject irrelevant articles.
  */
-export function searchKnowledgeBase(query: string, limit: number = 3): SearchResult[] {
-  const db = getDatabase();
+export async function searchKnowledgeBase(query: string, limit: number = 3): Promise<SearchResult[]> {
   const queryEmbedding = generateEmbedding(query);
   const cleanQuery = query.toLowerCase();
 
-  const rows = db.prepare(`
-    SELECT id, document_id, document_title, category, chunk_index, content, embedding_json
-    FROM knowledge_chunks
-  `).all() as any[];
+  const rows = await searchKnowledgeBaseChunks();
+
 
   const scored: SearchResult[] = [];
 

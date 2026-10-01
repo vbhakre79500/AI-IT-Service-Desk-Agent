@@ -9,7 +9,7 @@ export async function GET(
   try {
     const user = await requireAuth(req);
     const { id } = await params;
-    const ticket = getTicketById(id);
+    const ticket = await getTicketById(id);
 
     if (!ticket) {
       return NextResponse.json({ success: false, error: 'Ticket not found' }, { status: 404 });
@@ -42,7 +42,7 @@ export async function POST(
     const user = await requireAuth(req);
     const { id } = await params;
 
-    const ticket = getTicketById(id);
+    const ticket = await getTicketById(id);
     if (!ticket) {
       return NextResponse.json({ success: false, error: 'Ticket not found' }, { status: 404 });
     }
@@ -57,7 +57,7 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Message cannot be empty' }, { status: 400 });
     }
 
-    const newMsg = addTicketMessage(id, 'USER', body.message, user.id, user.name);
+    const newMsg = await addTicketMessage(id, 'USER', body.message, user.id, user.name);
 
     return NextResponse.json({
       success: true,

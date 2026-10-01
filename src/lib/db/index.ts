@@ -1,194 +1,206 @@
-import { DatabaseSync } from 'node:sqlite';
-import path from 'node:path';
+import { Pool, PoolConfig } from 'pg';
+import { newDb, IMemoryDb } from 'pg-mem';
 import fs from 'node:fs';
+import path from 'node:path';
 
-const customPath = process.env.DATABASE_PATH || './data/autodesk.db';
-const DB_PATH = path.isAbsolute(customPath) ? customPath : path.resolve(/*turbopackIgnore: true*/ process.cwd(), customPath);
-const DB_DIR = path.dirname(DB_PATH);
-
-// Ensure data directory exists
-if (!fs.existsSync(DB_DIR)) {
-  fs.mkdirSync(DB_DIR, { recursive: true });
-}
-
-let dbInstance: DatabaseSync | null = null;
-
-export function getDatabase(): DatabaseSync {
-  if (!dbInstance) {
-    dbInstance = new DatabaseSync(DB_PATH);
-    // Enable foreign key constraints, WAL mode, and busy timeout for high concurrency
-    dbInstance.exec('PRAGMA foreign_keys = ON;');
-    dbInstance.exec('PRAGMA journal_mode = WAL;');
-    dbInstance.exec('PRAGMA busy_timeout = 5000;');
-    initSchema(dbInstance);
+// Load schema DDL
+function loadSchemaSql(): string {
+  try {
+    const schemaPath = path.resolve(/*turbopackIgnore: true*/ process.cwd(), 'src/lib/db/schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      return fs.readFileSync(schemaPath, 'utf-8');
+    }
+  } catch {
+    // Fallback if path resolve varies
   }
-  return dbInstance;
+  return '';
 }
 
-function initSchema(db: DatabaseSync): void {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      role TEXT NOT NULL CHECK(role IN ('EMPLOYEE', 'IT_AGENT', 'IT_ADMIN')),
-      department TEXT NOT NULL,
-      avatar_url TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
+let activePool: Pool | any = null;
+let isMemoryMode = false;
+let schemaInitialized = false;
 
-    CREATE TABLE IF NOT EXISTS employees (
-      id TEXT PRIMARY KEY,
-      user_id TEXT UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-      title TEXT NOT NULL,
-      manager_email TEXT,
-      account_status TEXT NOT NULL CHECK(account_status IN ('ACTIVE', 'LOCKED', 'SUSPENDED', 'PASSWORD_EXPIRED')),
-      mfa_enabled INTEGER DEFAULT 1,
-      mfa_synced INTEGER DEFAULT 1,
-      failed_login_count INTEGER DEFAULT 0,
-      last_password_change TEXT,
-      department TEXT NOT NULL
-    );
+/**
+ * Determines whether a given database URL is a real, connectable PostgreSQL string
+ * vs an empty string or template placeholder.
+ */
+function isConfiguredPostgresUrl(url?: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!trimmed.startsWith('postgres://') && !trimmed.startsWith('postgresql://')) {
+    return false;
+  }
+  // Check for placeholder templates
+  if (trimmed.includes('[YOUR-PASSWORD]') || trimmed.includes('[YOUR-PROJECT-REF]') || trimmed.includes('example.com')) {
+    return false;
+  }
+  return true;
+}
 
-    CREATE TABLE IF NOT EXISTS devices (
-      id TEXT PRIMARY KEY,
-      user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
-      device_name TEXT NOT NULL,
-      os TEXT NOT NULL,
-      os_version TEXT NOT NULL,
-      compliance_status TEXT NOT NULL CHECK(compliance_status IN ('COMPLIANT', 'NON_COMPLIANT', 'PENDING')),
-      disk_free_gb REAL,
-      ip_address TEXT,
-      vpn_client_version TEXT,
-      last_seen TEXT DEFAULT (datetime('now'))
-    );
+/**
+ * Initializes and returns the active PostgreSQL connection pool.
+ * - Uses real pg.Pool with SSL when DATABASE_URL is configured.
+ * - Gracefully falls back to an in-memory PostgreSQL engine (pg-mem) for testing and local dev.
+ */
+export function getPool(): Pool | any {
+  if (activePool) {
+    return activePool;
+  }
 
-    CREATE TABLE IF NOT EXISTS system_status (
-      id TEXT PRIMARY KEY,
-      service_name TEXT UNIQUE NOT NULL,
-      display_name TEXT NOT NULL,
-      status TEXT NOT NULL CHECK(status IN ('OPERATIONAL', 'DEGRADED', 'OUTAGE', 'MAINTENANCE')),
-      latency_ms INTEGER,
-      incident_notes TEXT,
-      updated_at TEXT DEFAULT (datetime('now'))
-    );
+  const dbUrl = process.env.DATABASE_URL;
 
-    CREATE TABLE IF NOT EXISTS tickets (
-      id TEXT PRIMARY KEY,
-      ticket_number TEXT UNIQUE NOT NULL,
-      creator_id TEXT REFERENCES users(id),
-      title TEXT NOT NULL,
-      description TEXT NOT NULL,
-      category TEXT NOT NULL,
-      priority TEXT NOT NULL CHECK(priority IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
-      status TEXT NOT NULL CHECK(status IN ('OPEN', 'INVESTIGATING', 'AWAITING_APPROVAL', 'AWAITING_USER', 'RESOLVED', 'ESCALATED', 'CLOSED')),
-      assigned_to TEXT REFERENCES users(id),
-      device_id TEXT,
-      error_code TEXT,
-      resolution_summary TEXT,
-      escalation_reason TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
-    );
+  if (isConfiguredPostgresUrl(dbUrl)) {
+    try {
+      const isSupabase = dbUrl?.includes('supabase') || dbUrl?.includes('pooler');
+      const poolConfig: PoolConfig = {
+        connectionString: dbUrl,
+        ssl: isSupabase || process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+      };
 
-    CREATE TABLE IF NOT EXISTS ticket_messages (
-      id TEXT PRIMARY KEY,
-      ticket_id TEXT REFERENCES tickets(id) ON DELETE CASCADE,
-      sender_type TEXT NOT NULL CHECK(sender_type IN ('USER', 'AGENT', 'SYSTEM')),
-      sender_id TEXT,
-      sender_name TEXT,
-      message TEXT NOT NULL,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
+      activePool = new Pool(poolConfig);
+      isMemoryMode = false;
+      return activePool;
+    } catch {
+      // If pool creation fails, fallback to memory
+    }
+  }
 
-    CREATE TABLE IF NOT EXISTS agent_runs (
-      id TEXT PRIMARY KEY,
-      ticket_id TEXT REFERENCES tickets(id) ON DELETE CASCADE,
-      status TEXT NOT NULL CHECK(status IN ('RUNNING', 'WAITING_APPROVAL', 'WAITING_INPUT', 'COMPLETED', 'ESCALATED', 'FAILED')),
-      step_count INTEGER DEFAULT 0,
-      max_steps INTEGER DEFAULT 10,
-      confidence REAL DEFAULT 0.0,
-      current_diagnosis TEXT,
-      evidence_json TEXT DEFAULT '[]',
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
-    );
+  // In-memory PostgreSQL instance for offline testing / development
+  const memDb: IMemoryDb = newDb();
+  activePool = new (memDb.adapters.createPg().Pool)();
+  isMemoryMode = true;
 
-    CREATE TABLE IF NOT EXISTS agent_actions (
-      id TEXT PRIMARY KEY,
-      agent_run_id TEXT REFERENCES agent_runs(id) ON DELETE CASCADE,
-      step_number INTEGER NOT NULL,
-      action_type TEXT NOT NULL,
-      tool_name TEXT,
-      tool_input TEXT,
-      reasoning_summary TEXT NOT NULL,
-      evidence_findings TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
+  return activePool;
+}
 
-    CREATE TABLE IF NOT EXISTS tool_calls (
-      id TEXT PRIMARY KEY,
-      agent_action_id TEXT REFERENCES agent_actions(id) ON DELETE SET NULL,
-      ticket_id TEXT REFERENCES tickets(id) ON DELETE CASCADE,
-      tool_name TEXT NOT NULL,
-      input_params TEXT NOT NULL,
-      output_result TEXT,
-      status TEXT NOT NULL CHECK(status IN ('PENDING', 'SUCCESS', 'FAILED', 'TIMEOUT', 'DENIED')),
-      error_message TEXT,
-      duration_ms INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
+/**
+ * Ensures the PostgreSQL schema is created and verified on the database.
+ */
+export async function initPostgresSchema(pool?: any): Promise<void> {
+  if (schemaInitialized) return;
+  const p = pool || getPool();
+  const ddl = loadSchemaSql();
+  if (ddl) {
+    await p.query(ddl);
+  }
+  schemaInitialized = true;
 
-    CREATE TABLE IF NOT EXISTS approvals (
-      id TEXT PRIMARY KEY,
-      ticket_id TEXT REFERENCES tickets(id) ON DELETE CASCADE,
-      agent_run_id TEXT REFERENCES agent_runs(id) ON DELETE CASCADE,
-      action_type TEXT NOT NULL,
-      tool_name TEXT NOT NULL,
-      tool_input TEXT NOT NULL,
-      risk_level TEXT NOT NULL CHECK(risk_level IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
-      status TEXT NOT NULL CHECK(status IN ('PENDING', 'APPROVED', 'REJECTED')),
-      requested_by TEXT NOT NULL,
-      reviewed_by TEXT REFERENCES users(id),
-      review_reason TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
-    );
+  try {
+    const userCheck = await p.query('SELECT COUNT(*) as count FROM users');
+    const count = parseInt(userCheck.rows[0]?.count || '0', 10);
+    if (count === 0) {
+      const { seedDatabase } = await import('./seed');
+      await seedDatabase(p);
+    }
+  } catch {
+    // Ignore seeding error if tables are being migrated externally
+  }
+}
 
-    CREATE TABLE IF NOT EXISTS audit_logs (
-      id TEXT PRIMARY KEY,
-      ticket_id TEXT,
-      user_id TEXT,
-      action TEXT NOT NULL,
-      resource TEXT NOT NULL,
-      risk_level TEXT NOT NULL,
-      details TEXT,
-      ip_address TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
+/**
+ * Executes a parameterized SQL query returning rows and rowCount.
+ */
+export async function query<T = any>(
+  text: string, 
+  params: any[] = []
+): Promise<{ rows: T[]; rowCount: number }> {
+  const p = getPool();
+  if (!schemaInitialized) {
+    await initPostgresSchema(p);
+  }
+  const result = await p.query(text, params);
+  return {
+    rows: (result.rows || []) as T[],
+    rowCount: result.rowCount || (result.rows ? result.rows.length : 0),
+  };
+}
 
-    CREATE TABLE IF NOT EXISTS knowledge_documents (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      category TEXT NOT NULL,
-      content TEXT NOT NULL,
-      created_at TEXT DEFAULT (datetime('now'))
-    );
+/**
+ * Executes a query and returns the first row or null.
+ */
+export async function queryOne<T = any>(text: string, params: any[] = []): Promise<T | null> {
+  const res = await query<T>(text, params);
+  return res.rows[0] || null;
+}
 
-    CREATE TABLE IF NOT EXISTS knowledge_chunks (
-      id TEXT PRIMARY KEY,
-      document_id TEXT REFERENCES knowledge_documents(id) ON DELETE CASCADE,
-      document_title TEXT NOT NULL,
-      category TEXT NOT NULL,
-      chunk_index INTEGER NOT NULL,
-      content TEXT NOT NULL,
-      embedding_json TEXT NOT NULL
-    );
+/**
+ * Executes a query and returns all rows.
+ */
+export async function queryRows<T = any>(text: string, params: any[] = []): Promise<T[]> {
+  const res = await query<T>(text, params);
+  return res.rows;
+}
 
-    CREATE INDEX IF NOT EXISTS idx_tickets_creator ON tickets(creator_id);
-    CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
-    CREATE INDEX IF NOT EXISTS idx_agent_runs_ticket ON agent_runs(ticket_id);
-    CREATE INDEX IF NOT EXISTS idx_tool_calls_ticket ON tool_calls(ticket_id);
-    CREATE INDEX IF NOT EXISTS idx_approvals_ticket ON approvals(ticket_id);
-  `);
+/**
+ * Executes an INSERT/UPDATE/DELETE query and returns the affected row count.
+ */
+export async function execute(text: string, params: any[] = []): Promise<number> {
+  const res = await query(text, params);
+  return res.rowCount;
+}
+
+/**
+ * Diagnostic database connectivity check.
+ * NEVER prints or exposes the DATABASE_URL.
+ */
+export async function checkDatabaseConnectivity(): Promise<{
+  connected: boolean;
+  provider: 'supabase_postgres' | 'local_postgres' | 'in_memory_postgres';
+  database: string;
+  latencyMs: number;
+  error?: string;
+}> {
+  const startTime = Date.now();
+  try {
+    const result = await query('SELECT 1 as ping');
+    const isLive = result.rows && result.rows.length > 0;
+    const latencyMs = Math.max(0, Date.now() - startTime);
+
+    let provider: 'supabase_postgres' | 'local_postgres' | 'in_memory_postgres' = 'in_memory_postgres';
+    let dbName = 'in-memory (pg-mem)';
+    if (!isMemoryMode) {
+      provider = process.env.DATABASE_URL?.includes('supabase') ? 'supabase_postgres' : 'local_postgres';
+      dbName = process.env.DATABASE_URL?.includes('supabase') ? 'Supabase PostgreSQL' : 'PostgreSQL';
+    }
+
+    return {
+      connected: isLive,
+      provider,
+      database: dbName,
+      latencyMs,
+    };
+  } catch (err: any) {
+    return {
+      connected: false,
+      provider: isMemoryMode ? 'in_memory_postgres' : 'supabase_postgres',
+      database: 'Unknown',
+      latencyMs: Math.max(0, Date.now() - startTime),
+      error: err.message || 'Database connection probe failed',
+    };
+  }
+}
+
+/**
+ * Closes the active database connection pool (useful during clean process exit).
+ */
+export async function closeDatabase(): Promise<void> {
+  if (activePool && typeof activePool.end === 'function') {
+    await activePool.end();
+    activePool = null;
+    schemaInitialized = false;
+  }
+}
+
+// Backward compatibility alias for legacy imports
+export function getDatabase() {
+  return {
+    query,
+    queryOne,
+    queryRows,
+    execute,
+    getPool,
+  };
 }

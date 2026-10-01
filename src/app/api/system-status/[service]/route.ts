@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { service } = await params;
-    const status = getSystemStatus(service);
+    const status = await getSystemStatus(service);
 
     if (!status) {
       return NextResponse.json({ success: false, error: `Service '${service}' not found` }, { status: 404 });

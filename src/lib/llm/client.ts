@@ -79,23 +79,54 @@ async function callGeminiLLM(ctx: LLMDecisionContext, modelName?: string): Promi
   const model = modelName || process.env.LLM_MODEL || 'gemini-3.5-flash-lite';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
+  const alreadyUsedTools = ctx.evidence.map((e) => e.source);
+  const uniqueUsedTools = [...new Set(alreadyUsedTools)];
+
   const systemInstruction = `
 You are the AutoDesk AI Autonomous IT Helpdesk Resolution Agent.
 Your goal is to safely, methodically, and efficiently diagnose and resolve enterprise IT issues using available evidence and tools.
 Never hallucinate resolution. Every remediation must be verified.
 High/Medium risk actions require human approval.
 Do NOT reveal chain-of-thought; produce a structured JSON decision.
+
+MANDATORY INVESTIGATION RULES:
+1. TOOL DEDUPLICATION: Never call a tool you have already called (check the "Tools Already Used" list). Calling the same tool again wastes a step and is forbidden unless the tool name is not in the already-used list.
+2. EVIDENCE SUFFICIENCY BEFORE APPROVAL: Before setting status="awaiting_approval" for any remediation action, you MUST have gathered evidence from AT LEAST 3 different tools. If you have fewer than 3 distinct evidence sources, continue investigating with a tool you have not yet used.
+3. INVESTIGATION ORDER: For authentication/account issues, investigate in this order: (a) search_knowledge_base for SOPs, (b) check_system_status for service health, (c) check_user_account for account state, (d) run_diagnostics if needed — THEN request approval.
+4. DO NOT REPEAT: If "check_system_status" is already in Tools Already Used, do not call it again. Pick a different diagnostic tool.
+5. ESCALATION: Only escalate if there is a confirmed infrastructure outage (status=OUTAGE) or after exhausting all diagnostic options.
+
 Available Tools:
 ${getToolsPromptDescription()}
 `;
 
+  // Build a dynamic step-specific directive based on current evidence state
+  const hasKB = uniqueUsedTools.includes('search_knowledge_base');
+  const hasSysStatus = uniqueUsedTools.includes('check_system_status');
+  const hasUserAccount = uniqueUsedTools.includes('check_user_account');
+  let nextToolHint = '';
+  if (ctx.evidence.length === 0) {
+    nextToolHint = `\nFIRST STEP DIRECTIVE: No evidence has been collected yet. You MUST start with "search_knowledge_base" to retrieve relevant SOPs and runbooks for this ticket. Set tool_name="search_knowledge_base".`;
+  } else if (!hasKB) {
+    nextToolHint = `\nNEXT TOOL DIRECTIVE: You have not yet consulted the knowledge base. Use "search_knowledge_base" next.`;
+  } else if (!hasSysStatus) {
+    nextToolHint = `\nNEXT TOOL DIRECTIVE: You have not yet checked the service health. Use "check_system_status" next.`;
+  } else if (!hasUserAccount) {
+    nextToolHint = `\nNEXT TOOL DIRECTIVE: You have not yet checked the user account status. Use "check_user_account" next.`;
+  }
+
   const userPrompt = `
 Current Ticket: ${JSON.stringify(ctx.ticket)}
 Step: ${ctx.stepCount} of ${ctx.maxSteps}
+Tools Already Used (DO NOT REPEAT THESE): ${uniqueUsedTools.length > 0 ? uniqueUsedTools.join(', ') : 'none'}
+Evidence Collected So Far (${ctx.evidence.length} items): ${JSON.stringify(ctx.evidence)}
 Previous Actions Taken: ${JSON.stringify(ctx.previousActions)}
-Evidence Collected So Far: ${JSON.stringify(ctx.evidence)}
 Relevant IT Runbooks:
 ${ctx.retrievedRunbooks || 'None'}
+
+IMPORTANT: You have collected evidence from ${ctx.evidence.length} tool(s) so far.
+${ctx.evidence.length < 3 ? `You need evidence from at least ${3 - ctx.evidence.length} more tool(s) before you can request approval. Set status="investigating" and pick a tool NOT in the already-used list above.` : 'You have sufficient evidence to proceed with a remediation decision if root cause is clear.'}
+${nextToolHint}
 
 Decide the best NEXT action based on the evidence.
 Return a valid JSON object matching:
@@ -115,6 +146,7 @@ Return a valid JSON object matching:
   "escalation_reason": string
 }
 `;
+
 
   const res = await fetch(url, {
     method: 'POST',

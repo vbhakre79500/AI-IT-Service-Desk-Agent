@@ -17,7 +17,7 @@ describe('Phase 11: Security & Policy Enforcement Audit Tests', () => {
     assert.strictEqual(res.status, 'DENIED');
 
     // Verify audit log recorded the blocked attempt
-    const logs = listAuditLogs(10);
+    const logs = await listAuditLogs(10);
     const blockedLog = logs.find((l) => l.action.includes('TOOL_EXECUTION_BLOCKED'));
     assert.ok(blockedLog, 'Security violation must be recorded in audit log');
   });

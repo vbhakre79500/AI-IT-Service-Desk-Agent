@@ -85,7 +85,7 @@ export async function executeToolSafely(
 
   if (!tool) {
     const durationMs = Date.now() - startTime;
-    const tc = recordToolCall({
+    const tc = await recordToolCall({
       agentActionId,
       ticketId: context.ticketId,
       toolName,
@@ -107,7 +107,7 @@ export async function executeToolSafely(
   const policy = validatePolicy(toolName, context.userRole, isApproved);
   if (!policy.allowed) {
     const durationMs = Date.now() - startTime;
-    const tc = recordToolCall({
+    const tc = await recordToolCall({
       agentActionId,
       ticketId: context.ticketId,
       toolName,
@@ -117,7 +117,7 @@ export async function executeToolSafely(
       durationMs,
     });
 
-    recordAuditLog({
+    await recordAuditLog({
       ticketId: context.ticketId,
       userId: context.userId,
       action: `TOOL_EXECUTION_BLOCKED: ${toolName}`,
@@ -140,7 +140,7 @@ export async function executeToolSafely(
   if (!validation.success) {
     const durationMs = Date.now() - startTime;
     const errorMsg = `Input validation failed: ${validation.error.issues.map((i) => i.message).join(', ')}`;
-    const tc = recordToolCall({
+    const tc = await recordToolCall({
       agentActionId,
       ticketId: context.ticketId,
       toolName,
@@ -169,7 +169,7 @@ export async function executeToolSafely(
     const result = (await Promise.race([executionPromise, timeoutPromise])) as any;
     const durationMs = Date.now() - startTime;
 
-    const tc = recordToolCall({
+    const tc = await recordToolCall({
       agentActionId,
       ticketId: context.ticketId,
       toolName,
@@ -179,7 +179,7 @@ export async function executeToolSafely(
       durationMs,
     });
 
-    recordAuditLog({
+    await recordAuditLog({
       ticketId: context.ticketId,
       userId: context.userId,
       action: `TOOL_EXECUTED: ${toolName}`,
@@ -201,7 +201,7 @@ export async function executeToolSafely(
     const status = isTimeout ? 'TIMEOUT' : 'FAILED';
     const errorMsg = err.message || 'Tool execution encountered an unknown error';
 
-    const tc = recordToolCall({
+    const tc = await recordToolCall({
       agentActionId,
       ticketId: context.ticketId,
       toolName,
@@ -211,7 +211,7 @@ export async function executeToolSafely(
       durationMs,
     });
 
-    recordAuditLog({
+    await recordAuditLog({
       ticketId: context.ticketId,
       userId: context.userId,
       action: `TOOL_EXECUTION_FAILED: ${toolName}`,
