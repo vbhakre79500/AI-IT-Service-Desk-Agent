@@ -5,22 +5,28 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   XCircle, 
-  Clock, 
   HelpCircle, 
-  ArrowRight, 
   ShieldAlert, 
   Cpu, 
   ChevronDown, 
   ChevronUp,
-  Database,
   Terminal,
-  FileText,
   Lock,
   RefreshCw,
   Search,
-  Activity
+  Activity,
+  Zap,
+  Radio,
+  FileCode2,
+  Server
 } from 'lucide-react';
-import { EvidenceItem } from '@/types';
+import { 
+  CyberButton, 
+  CyberBadge, 
+  CyberPanel, 
+  CyberTerminal, 
+  CyberStatus 
+} from '@/components/ui/cyber';
 
 interface AgentRunViewProps {
   run: any;
@@ -47,291 +53,415 @@ export function AgentRunView({
   const [showWhyModal, setShowWhyModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
+  const [activeTab, setActiveTab] = useState<'graph' | 'terminal'>('graph');
 
   const getToolIcon = (name?: string) => {
     switch (name) {
       case 'search_knowledge_base':
-        return <Search className="w-4 h-4 text-cyan-400" />;
+        return <Search className="w-4 h-4 text-[#00d4ff]" />;
       case 'check_system_status':
-        return <Activity className="w-4 h-4 text-emerald-400" />;
+        return <Activity className="w-4 h-4 text-[#00ff88]" />;
       case 'check_user_account':
-        return <Lock className="w-4 h-4 text-amber-400" />;
+        return <Lock className="w-4 h-4 text-[#f59e0b]" />;
       case 'run_diagnostics':
-        return <Terminal className="w-4 h-4 text-indigo-400" />;
+        return <Terminal className="w-4 h-4 text-[#00d4ff]" />;
       case 'unlock_account':
-        return <ShieldAlert className="w-4 h-4 text-rose-400" />;
+        return <ShieldAlert className="w-4 h-4 text-[#ff00ff]" />;
       case 'clear_application_cache':
-        return <RefreshCw className="w-4 h-4 text-blue-400" />;
+        return <RefreshCw className="w-4 h-4 text-[#00d4ff]" />;
       case 'close_ticket':
-        return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
+        return <CheckCircle2 className="w-4 h-4 text-[#00ff88]" />;
       case 'escalate_ticket':
-        return <AlertTriangle className="w-4 h-4 text-amber-400" />;
+        return <AlertTriangle className="w-4 h-4 text-[#ff3366]" />;
       default:
-        return <Cpu className="w-4 h-4 text-slate-400" />;
+        return <Cpu className="w-4 h-4 text-[#6b7280]" />;
     }
   };
 
+  // Convert real action sequence into terminal logs for the CyberTerminal component
+  const terminalLines = (actions || []).map((act, index) => {
+    const isApproval = act.actionType === 'REQUEST_APPROVAL';
+    const isResolve = act.actionType === 'RESOLVE';
+    const isEscalate = act.actionType === 'ESCALATE';
+    return {
+      prompt: isApproval ? '!' : isResolve ? '✓' : isEscalate ? '▲' : '>',
+      text: `[STEP ${act.stepNumber || index + 1}] ${act.toolName ? `EXEC ${act.toolName} // ` : ''}${act.reasoningSummary}`,
+      type: (isApproval ? 'warn' : isResolve ? 'success' : isEscalate ? 'error' : 'info') as any,
+    };
+  });
+
+  if (run?.status === 'WAITING_APPROVAL') {
+    terminalLines.push({
+      prompt: '!',
+      text: `HUMAN AUTHORIZATION INTERCEPT // Awaiting IT review for '${run.currentDiagnosis || 'remediation action'}'`,
+      type: 'warn',
+    });
+  } else if (run?.status === 'COMPLETED') {
+    terminalLines.push({
+      prompt: '✓',
+      text: `RESOLUTION CONFIRMED // Automated verification passed. Ticket closed safely.`,
+      type: 'success',
+    });
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header status banner */}
-      <div className={`p-4 rounded-2xl border transition-all ${
+      {/* 1. High-Priority Cyber Security Authorization Intercept Panel */}
+      {ticket?.status === 'AWAITING_APPROVAL' && (
+        <div className="relative bg-[#12121a] border-2 border-[#ff00ff] p-5 shadow-[0_0_25px_rgba(255,0,255,0.3)] cyber-chamfer animate-in fade-in duration-200">
+          <div className="flex items-center justify-between pb-3 border-b border-[#ff00ff]/30">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-[#ff00ff] animate-pulse" />
+              <h2 className="font-heading font-black text-sm text-[#ff00ff] tracking-widest uppercase">
+                // AUTHORIZATION REQUIRED: ELEVATED PRIVILEGE ACTION
+              </h2>
+            </div>
+            <CyberBadge variant="magenta" glow>
+              POLICY INTERCEPT
+            </CyberBadge>
+          </div>
+
+          <div className="py-4 space-y-3 font-mono text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-[#0a0a0f] border border-[#2a2a3a] p-2.5">
+                <span className="text-[10px] text-[#6b7280] block uppercase font-bold">TARGET ACTION</span>
+                <span className="text-white font-bold text-sm text-neon-pink">
+                  {actions?.find((a) => a.actionType === 'REQUEST_APPROVAL')?.toolName || 'Remediation Action'}
+                </span>
+              </div>
+              <div className="bg-[#0a0a0f] border border-[#2a2a3a] p-2.5">
+                <span className="text-[10px] text-[#6b7280] block uppercase font-bold">SECURITY RISK LEVEL</span>
+                <span className="text-[#f59e0b] font-bold text-sm">MEDIUM / SENSITIVE</span>
+              </div>
+              <div className="bg-[#0a0a0f] border border-[#2a2a3a] p-2.5">
+                <span className="text-[10px] text-[#6b7280] block uppercase font-bold">POLICY ENFORCEMENT</span>
+                <span className="text-[#00ff88] font-bold text-sm">RESTRICTED_ROLE</span>
+              </div>
+            </div>
+
+            <div className="bg-[#0a0a0f] border border-[#2a2a3a] p-3 text-slate-200">
+              <span className="text-[10px] text-[#6b7280] uppercase font-bold block mb-1">EVIDENCE-BASED REASONING:</span>
+              <p className="leading-relaxed">
+                {run?.currentDiagnosis || 'Agent identified root cause and requested human approval before executing state-altering remediation.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-[#ff00ff]/30 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-[10px] font-mono text-[#6b7280]">
+              * Zero unauthorized state mutations permitted by Deterministic Policy Engine.
+            </div>
+
+            <div className="flex items-center gap-3">
+              {!showRejectInput ? (
+                <>
+                  <CyberButton
+                    variant="cta"
+                    onClick={() => onApprove && onApprove(ticket.id)}
+                    disabled={isProcessing}
+                    className="min-h-[44px]"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>AUTHORIZE & EXECUTE</span>
+                  </CyberButton>
+                  <CyberButton
+                    variant="destructive"
+                    onClick={() => setShowRejectInput(true)}
+                    disabled={isProcessing}
+                    className="min-h-[44px]"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    <span>DENY ACTION</span>
+                  </CyberButton>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 font-mono">
+                  <input
+                    type="text"
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="Enter reason for denial..."
+                    className="px-3 py-2 bg-[#0a0a0f] border border-[#ff3366] text-xs text-white focus:outline-none min-h-[40px]"
+                  />
+                  <CyberButton
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (onReject) onReject(ticket.id, rejectReason || 'Denied by reviewer');
+                      setShowRejectInput(false);
+                    }}
+                  >
+                    CONFIRM DENY
+                  </CyberButton>
+                  <CyberButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRejectInput(false)}
+                  >
+                    CANCEL
+                  </CyberButton>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Top Cyber HUD Status Console */}
+      <div className={`p-4 bg-[#12121a] border ${
         run?.status === 'COMPLETED'
-          ? 'bg-emerald-500/10 border-emerald-500/30'
+          ? 'border-[#00ff88] shadow-[0_0_15px_rgba(0,255,136,0.15)]'
           : run?.status === 'WAITING_APPROVAL'
-          ? 'bg-amber-500/10 border-amber-500/30 agent-active-glow'
+          ? 'border-[#ff00ff] shadow-[0_0_15px_rgba(255,0,255,0.15)]'
           : run?.status === 'ESCALATED'
-          ? 'bg-rose-500/10 border-rose-500/30'
-          : 'bg-cyan-500/10 border-cyan-500/30'
-      }`}>
+          ? 'border-[#ff3366] shadow-[0_0_15px_rgba(255,51,102,0.15)]'
+          : 'border-[#00d4ff] shadow-[0_0_15px_rgba(0,212,255,0.15)]'
+      } cyber-chamfer transition-all`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            <div className={`w-10 h-10 cyber-chamfer-sm flex items-center justify-center font-bold ${
               run?.status === 'COMPLETED'
-                ? 'bg-emerald-500 text-slate-950 font-bold'
+                ? 'bg-[#00ff88] text-[#0a0a0f]'
                 : run?.status === 'WAITING_APPROVAL'
-                ? 'bg-amber-500 text-slate-950 font-bold'
+                ? 'bg-[#ff00ff] text-[#0a0a0f]'
                 : run?.status === 'ESCALATED'
-                ? 'bg-rose-500 text-white font-bold'
-                : 'bg-cyan-500 text-slate-950 font-bold'
+                ? 'bg-[#ff3366] text-white'
+                : 'bg-[#00d4ff] text-[#0a0a0f]'
             }`}>
               <Cpu className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-white text-base">
+                <h3 className="font-heading font-bold text-white text-sm tracking-wider">
                   {run?.status === 'COMPLETED'
-                    ? 'Autonomous Resolution Verified'
+                    ? 'AUTONOMOUS RESOLUTION VERIFIED'
                     : run?.status === 'WAITING_APPROVAL'
-                    ? 'Human Authorization Required'
+                    ? 'HUMAN AUTHORIZATION REQUIRED'
                     : run?.status === 'ESCALATED'
-                    ? 'Escalated to Human IT Support'
-                    : 'Autonomous Agent Investigation'}
+                    ? 'ESCALATED TO TIER-2 HUMAN SUPPORT'
+                    : 'AUTONOMOUS AGENT INVESTIGATION'}
                 </h3>
-                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                  Step {run?.stepCount || 0} / {run?.maxSteps || 10}
+                <span className="text-[10px] font-mono px-2 py-0.5 bg-[#0a0a0f] text-[#00ff88] border border-[#2a2a3a]">
+                  STEP {run?.stepCount || 0} / {run?.maxSteps || 10}
                 </span>
               </div>
-              <p className="text-xs text-slate-300 mt-0.5">
-                {run?.currentDiagnosis || 'Agent evaluating evidence and hypothesis tree.'}
+              <p className="text-xs font-mono text-[#a0a0b0] mt-1">
+                {run?.currentDiagnosis || 'Agent evaluating evidence graph and selecting dynamic tools.'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             {run?.status !== 'COMPLETED' && run?.status !== 'WAITING_APPROVAL' && run?.status !== 'ESCALATED' && (
-              <button
+              <CyberButton
+                variant="cta"
                 onClick={onTriggerInvestigation}
                 disabled={isProcessing}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold text-xs shadow-lg shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                className="min-h-[44px]"
               >
                 <Cpu className={`w-4 h-4 ${isProcessing ? 'animate-spin' : ''}`} />
-                {isProcessing ? 'Agent Reasoning...' : 'Trigger Autonomous Triage'}
-              </button>
+                <span>{isProcessing ? 'AGENT REASONING...' : 'TRIGGER AUTONOMOUS TRIAGE'}</span>
+              </CyberButton>
             )}
           </div>
         </div>
-
-        {/* Pending Approval Banner */}
-        {ticket?.status === 'AWAITING_APPROVAL' && (
-          <div className="mt-4 pt-4 border-t border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
-                  Human-In-The-Loop Approval Action
-                </span>
-              </div>
-              <p className="text-xs text-slate-200">
-                The agent proposes executing a sensitive remediation. Review evidence below and authorize or decline.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {!showRejectInput ? (
-                <>
-                  <button
-                    onClick={() => onApprove && onApprove(ticket.id)}
-                    disabled={isProcessing}
-                    className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 hover:scale-[1.02] transition-all"
-                  >
-                    ✓ Authorize & Execute
-                  </button>
-                  <button
-                    onClick={() => setShowRejectInput(true)}
-                    disabled={isProcessing}
-                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-rose-300 border border-slate-700 hover:border-rose-500/40 text-xs font-semibold transition-all"
-                  >
-                    ✕ Reject Action
-                  </button>
-                </>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    placeholder="Enter reason for rejection..."
-                    className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-rose-500"
-                  />
-                  <button
-                    onClick={() => {
-                      if (onReject) onReject(ticket.id, rejectReason || 'Denied by reviewer');
-                      setShowRejectInput(false);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold text-xs"
-                  >
-                    Confirm Rejection
-                  </button>
-                  <button
-                    onClick={() => setShowRejectInput(false)}
-                    className="px-2 py-1.5 rounded-lg text-slate-400 text-xs hover:text-white"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Observability Timeline: Dynamic Actions Taken */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-            <Activity className="w-3.5 h-3.5 text-cyan-400" />
-            Observable Agent Trajectory & Evidence Graph
-          </h4>
-          <span className="text-[11px] text-slate-500 font-mono">
-            {actions?.length || 0} Dynamic Steps Executed
-          </span>
+      {/* 3. Investigation Tabs: Visual Execution Graph vs. Live Cyber Terminal */}
+      <div className="flex items-center justify-between border-b border-[#2a2a3a] pb-2 font-mono">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab('graph')}
+            className={`px-3 py-1 text-xs uppercase font-bold tracking-wider transition-all border ${
+              activeTab === 'graph'
+                ? 'bg-[#00ff88]/10 text-[#00ff88] border-[#00ff88]'
+                : 'text-[#6b7280] border-transparent hover:text-white'
+            }`}
+          >
+            [ EXECUTION GRAPH ]
+          </button>
+          <button
+            onClick={() => setActiveTab('terminal')}
+            className={`px-3 py-1 text-xs uppercase font-bold tracking-wider transition-all border ${
+              activeTab === 'terminal'
+                ? 'bg-[#00d4ff]/10 text-[#00d4ff] border-[#00d4ff]'
+                : 'text-[#6b7280] border-transparent hover:text-white'
+            }`}
+          >
+            [ AGENT TERMINAL HUD ]
+          </button>
         </div>
 
-        {actions && actions.length > 0 ? (
-          <div className="space-y-3">
-            {actions.map((act, index) => {
-              const tc = toolCalls?.find((t) => t.agentActionId === act.id);
-              const isExpanded = expandedAction === act.id;
+        <span className="text-[11px] text-[#6b7280]">
+          {actions?.length || 0} DYNAMIC ACTIONS RECORDED
+        </span>
+      </div>
 
-              return (
-                <div
-                  key={act.id || index}
-                  className="rounded-2xl glass-panel border border-slate-800/80 p-4 transition-all hover:border-slate-700"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center shrink-0 mt-0.5 border border-slate-700">
-                        {getToolIcon(act.toolName)}
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-white">
-                            {act.actionType === 'REQUEST_APPROVAL'
-                              ? `Request Approval: ${act.toolName}`
-                              : act.actionType === 'RESOLVE'
-                              ? 'Verified Resolution'
-                              : act.actionType === 'ESCALATE'
-                              ? 'Escalation Dossier Formulated'
-                              : `Tool Executed: ${act.toolName}`}
-                          </span>
-                          {tc && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
-                              {tc.durationMs}ms
+      {/* TAB A: Visual Execution Graph */}
+      {activeTab === 'graph' && (
+        <div className="space-y-3 font-mono">
+          {actions && actions.length > 0 ? (
+            <div className="space-y-3 relative before:absolute before:top-4 before:bottom-4 before:left-4 before:w-0.5 before:bg-[#2a2a3a] before:z-0">
+              {actions.map((act, index) => {
+                const tc = toolCalls?.find((t) => t.agentActionId === act.id);
+                const isExpanded = expandedAction === act.id;
+                const isApproval = act.actionType === 'REQUEST_APPROVAL';
+                const isResolve = act.actionType === 'RESOLVE';
+                const isEscalate = act.actionType === 'ESCALATE';
+
+                const borderAccent = isApproval
+                  ? 'border-[#ff00ff]/60 hover:border-[#ff00ff]'
+                  : isResolve
+                  ? 'border-[#00ff88]/60 hover:border-[#00ff88]'
+                  : isEscalate
+                  ? 'border-[#ff3366]/60 hover:border-[#ff3366]'
+                  : 'border-[#2a2a3a] hover:border-[#00d4ff]';
+
+                const badgeVariant = isApproval
+                  ? 'magenta'
+                  : isResolve
+                  ? 'green'
+                  : isEscalate
+                  ? 'red'
+                  : 'cyan';
+
+                return (
+                  <div
+                    key={act.id || index}
+                    className={`relative z-10 bg-[#12121a] border ${borderAccent} p-4 cyber-chamfer-sm transition-all`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 flex items-center justify-center shrink-0 border ${
+                          isApproval
+                            ? 'bg-[#ff00ff]/10 border-[#ff00ff]/40 text-[#ff00ff]'
+                            : isResolve
+                            ? 'bg-[#00ff88]/10 border-[#00ff88]/40 text-[#00ff88]'
+                            : isEscalate
+                            ? 'bg-[#ff3366]/10 border-[#ff3366]/40 text-[#ff3366]'
+                            : 'bg-[#00d4ff]/10 border-[#00d4ff]/40 text-[#00d4ff]'
+                        }`}>
+                          {getToolIcon(act.toolName)}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-white">
+                              {act.actionType === 'REQUEST_APPROVAL'
+                                ? `REQUEST APPROVAL: ${act.toolName}`
+                                : act.actionType === 'RESOLVE'
+                                ? 'VERIFIED RESOLUTION'
+                                : act.actionType === 'ESCALATE'
+                                ? 'ESCALATION DOSSIER FORMULATED'
+                                : `EXEC TOOL: ${act.toolName}`}
                             </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-300">{act.reasoningSummary}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* "Why this action?" explainer button */}
-                      <button
-                        onClick={() => setShowWhyModal(act.id)}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 text-[11px] font-semibold transition-colors"
-                        title="View evidence explanation"
-                      >
-                        <HelpCircle className="w-3.5 h-3.5" />
-                        <span>Why this action?</span>
-                      </button>
-
-                      <button
-                        onClick={() => setExpandedAction(isExpanded ? null : act.id)}
-                        className="p-1 rounded-lg text-slate-400 hover:text-white transition-colors"
-                      >
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Expanded Technical Evidence Inspection */}
-                  {isExpanded && tc && (
-                    <div className="mt-3 pt-3 border-t border-slate-800/80 text-xs font-mono space-y-2">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/60">
-                          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">
-                            Input Parameters
+                            <CyberBadge variant={badgeVariant as any}>
+                              {act.actionType}
+                            </CyberBadge>
+                            {tc && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-[#0a0a0f] text-[#6b7280] border border-[#2a2a3a]">
+                                {tc.durationMs}MS
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-[#a0a0b0] leading-relaxed">
+                            {act.reasoningSummary}
                           </p>
-                          <pre className="text-slate-300 overflow-x-auto whitespace-pre-wrap">
-                            {JSON.stringify(tc.inputParams, null, 2)}
-                          </pre>
-                        </div>
-                        <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/60">
-                          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">
-                            Execution Evidence Output
-                          </p>
-                          <pre className="text-emerald-400/90 overflow-x-auto whitespace-pre-wrap">
-                            {JSON.stringify(tc.outputResult || tc.errorMessage, null, 2)}
-                          </pre>
                         </div>
                       </div>
-                    </div>
-                  )}
 
-                  {/* "Why this action?" Modal / Popover */}
-                  {showWhyModal === act.id && (
-                    <div className="mt-3 p-3.5 rounded-xl bg-gradient-to-r from-slate-900 to-indigo-950/40 border border-cyan-500/30 text-xs space-y-2 animate-in fade-in duration-150">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-cyan-400 font-bold">
-                          <Sparkles className="w-4 h-4" />
-                          <span>Evidence-Based Rationale</span>
-                        </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Evidence explanation toggle */}
                         <button
-                          onClick={() => setShowWhyModal(null)}
-                          className="text-slate-400 hover:text-white text-xs font-bold px-1"
+                          onClick={() => setShowWhyModal(showWhyModal === act.id ? null : act.id)}
+                          className="px-2.5 py-1 text-[10px] uppercase font-bold border border-[#00d4ff]/40 text-[#00d4ff] bg-[#00d4ff]/10 hover:bg-[#00d4ff]/20 transition-colors"
+                          title="View evidence rationale"
                         >
-                          ✕
+                          // WHY THIS?
+                        </button>
+
+                        <button
+                          onClick={() => setExpandedAction(isExpanded ? null : act.id)}
+                          className="p-1 text-[#6b7280] hover:text-[#00ff88] transition-colors"
+                          aria-label="Toggle details"
+                        >
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
                       </div>
-                      <p className="text-slate-200 leading-relaxed">
-                        {act.reasoningSummary}
-                      </p>
-                      <div className="pt-1.5 flex items-center gap-2 text-[10px] text-slate-400 border-t border-slate-800">
-                        <span className="font-semibold text-slate-300">Policy Guard:</span>
-                        <span>Enforced role boundary & input validation via Deterministic Policy Engine.</span>
-                      </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-8 rounded-2xl glass-panel border border-slate-800/80 text-center space-y-3">
-            <Cpu className="w-10 h-10 text-slate-600 mx-auto" />
-            <div>
-              <p className="text-sm font-semibold text-slate-300">No agent actions recorded yet</p>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-                Click &quot;Trigger Autonomous Triage&quot; above to watch the agent dynamically inspect knowledge, systems, and user accounts.
-              </p>
+
+                    {/* Expanded Technical Inspection */}
+                    {isExpanded && tc && (
+                      <div className="mt-3 pt-3 border-t border-[#2a2a3a] text-xs space-y-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="p-3 bg-[#0a0a0f] border border-[#2a2a3a]">
+                            <span className="text-[10px] text-[#6b7280] uppercase font-bold block mb-1">
+                              &gt; INPUT PARAMETERS
+                            </span>
+                            <pre className="text-[#00d4ff] overflow-x-auto whitespace-pre-wrap text-[11px]">
+                              {JSON.stringify(tc.inputParams, null, 2)}
+                            </pre>
+                          </div>
+                          <div className="p-3 bg-[#0a0a0f] border border-[#2a2a3a]">
+                            <span className="text-[10px] text-[#6b7280] uppercase font-bold block mb-1">
+                              &gt; EVIDENCE OUTPUT
+                            </span>
+                            <pre className="text-[#00ff88] overflow-x-auto whitespace-pre-wrap text-[11px]">
+                              {JSON.stringify(tc.outputResult || tc.errorMessage, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* "Why this action?" Explainer Popover */}
+                    {showWhyModal === act.id && (
+                      <div className="mt-3 p-3.5 bg-[#0a0a0f] border border-[#00d4ff] text-xs space-y-2 animate-in fade-in duration-150">
+                        <div className="flex items-center justify-between pb-1 border-b border-[#2a2a3a]">
+                          <div className="flex items-center gap-1.5 text-[#00d4ff] font-bold text-[11px]">
+                            <Activity className="w-3.5 h-3.5" />
+                            <span>EVIDENCE-BASED REASONING SUMMARY</span>
+                          </div>
+                          <button
+                            onClick={() => setShowWhyModal(null)}
+                            className="text-[#6b7280] hover:text-white text-xs font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <p className="text-[#e0e0e0] leading-relaxed">
+                          {act.reasoningSummary}
+                        </p>
+                        <div className="pt-1.5 flex items-center gap-2 text-[10px] text-[#6b7280] border-t border-[#2a2a3a]">
+                          <span className="font-bold text-[#00ff88]">POLICY GUARD:</span>
+                          <span>Zero hallucination constraint enforced. Tool executed strictly via Policy Engine.</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="p-8 bg-[#12121a] border border-[#2a2a3a] text-center space-y-3 cyber-chamfer">
+              <Cpu className="w-10 h-10 text-[#6b7280] mx-auto" />
+              <div>
+                <p className="text-sm font-bold text-white font-mono">// NO AGENT ACTIONS RECORDED YET</p>
+                <p className="text-xs text-[#6b7280] max-w-sm mx-auto mt-1 font-mono">
+                  Trigger autonomous triage to start dynamic evidence collection and automated resolution.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB B: Cyber Terminal View */}
+      {activeTab === 'terminal' && (
+        <CyberTerminal
+          title="AUTONOMOUS AGENT REASONING STREAM // REAL-TIME LOG"
+          lines={terminalLines}
+        />
+      )}
     </div>
   );
-}
-
-function Sparkles(props: any) {
-  return <HelpCircle {...props} />;
 }

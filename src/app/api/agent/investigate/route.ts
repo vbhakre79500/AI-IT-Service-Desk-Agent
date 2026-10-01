@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runAgentInvestigation } from '@/lib/agent/orchestrator';
+import { requireAuth, checkTicketAccess, forbiddenResponse, handleAuthError } from '@/lib/auth/server';
+import { getTicketById } from '@/lib/db/queries';
 import { z } from 'zod';
 
 const RequestSchema = z.object({
@@ -9,6 +11,8 @@ const RequestSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await requireAuth(req);
+
     const body = await req.json();
     const validated = RequestSchema.safeParse(body);
 
@@ -19,6 +23,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Verify ticket existence and ownership
+    const ticket = getTicketById(validated.data.ticketId);
+    if (!ticket) {
+      return NextResponse.json(
+        { success: false, error: 'Ticket not found' },
+        { status: 404 }
+      );
+    }
+
+    if (!checkTicketAccess(ticket, user)) {
+      return forbiddenResponse('Access denied: You do not have permission to trigger investigations for this ticket.');
+    }
+
     const result = await runAgentInvestigation(validated.data.ticketId, validated.data.maxSteps);
 
     return NextResponse.json({
@@ -26,9 +43,13 @@ export async function POST(req: NextRequest) {
       result,
     });
   } catch (error: any) {
+    const authResp = handleAuthError(error);
+    if (authResp) return authResp;
+
     return NextResponse.json(
       { success: false, error: error.message || 'Agent investigation failed' },
       { status: 500 }
     );
   }
 }
+

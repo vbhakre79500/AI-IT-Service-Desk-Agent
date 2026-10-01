@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resumeAgentAfterApproval } from '@/lib/agent/orchestrator';
-import { getAuthenticatedUser } from '@/lib/auth/session';
+import { requireAnyRole, handleAuthError } from '@/lib/auth/server';
 import { getDatabase } from '@/lib/db';
 import { z } from 'zod';
 
@@ -14,7 +14,7 @@ export async function POST(
 ) {
   try {
     const { id: approvalId } = await params;
-    const user = await getAuthenticatedUser();
+    const user = await requireAnyRole(['IT_AGENT', 'IT_ADMIN'], req);
     const body = await req.json().catch(() => ({}));
     const validated = RejectSchema.parse(body);
 
@@ -38,9 +38,13 @@ export async function POST(
       result,
     });
   } catch (error: any) {
+    const authResp = handleAuthError(error);
+    if (authResp) return authResp;
+
     return NextResponse.json(
       { success: false, error: error.message || 'Rejection failed' },
       { status: 500 }
     );
   }
 }
+

@@ -153,9 +153,10 @@ d:/my_AI/
 ```bash
 npm test
 ```
-All 19 tests across all 6 test suites pass with 0 failures:
+All 22 tests across all 7 test suites pass with 0 failures:
 - `auth_rbac.test.ts` (3 tests)
 - `database.test.ts` (4 tests)
+- `env.test.ts` (3 tests)
 - `rag.test.ts` (3 tests)
 - `tools.test.ts` (4 tests)
 - `agent_loop.test.ts` (2 tests)

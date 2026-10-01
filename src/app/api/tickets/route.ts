@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listTickets, createTicket } from '@/lib/db/queries';
-import { getAuthenticatedUser } from '@/lib/auth/session';
+import { requireAuth, handleAuthError } from '@/lib/auth/server';
 import { z } from 'zod';
 
 const CreateTicketSchema = z.object({
@@ -14,7 +14,7 @@ const CreateTicketSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
+    const user = await requireAuth(req);
     const { searchParams } = new URL(req.url);
     const filterUser = searchParams.get('all') === 'true' && user.role !== 'EMPLOYEE' ? undefined : user.role === 'EMPLOYEE' ? user.id : undefined;
     const status = searchParams.get('status') || undefined;
@@ -27,6 +27,9 @@ export async function GET(req: NextRequest) {
       tickets,
     });
   } catch (error: any) {
+    const authResp = handleAuthError(error);
+    if (authResp) return authResp;
+
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to list tickets' },
       { status: 500 }
@@ -36,7 +39,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
+    const user = await requireAuth(req);
     const body = await req.json();
     const validated = CreateTicketSchema.safeParse(body);
 
@@ -63,9 +66,13 @@ export async function POST(req: NextRequest) {
       message: `Ticket ${ticket.ticketNumber} created successfully.`,
     });
   } catch (error: any) {
+    const authResp = handleAuthError(error);
+    if (authResp) return authResp;
+
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to create ticket' },
       { status: 500 }
     );
   }
 }
+

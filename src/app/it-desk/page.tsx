@@ -15,9 +15,19 @@ import {
   ShieldAlert,
   Cpu,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Terminal,
+  Activity,
+  Check,
+  X
 } from 'lucide-react';
 import { Ticket } from '@/types';
+import { 
+  CyberButton, 
+  CyberBadge, 
+  CyberPanel, 
+  CyberStatus 
+} from '@/components/ui/cyber';
 
 export default function ITDeskDashboard() {
   const { user } = useAuth();
@@ -79,114 +89,92 @@ export default function ITDeskDashboard() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 font-mono">
       {/* Workbench Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#2a2a3a] pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-              TIER-2 / HELP DESK OPERATOR
+            <span className="text-xs font-bold px-2 py-0.5 bg-[#00d4ff]/10 text-[#00d4ff] border border-[#00d4ff]/30">
+              TIER-2 HELPDESK WORKBENCH // HUMAN-IN-THE-LOOP
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
-            IT Service Desk Workbench
+          <h1 className="text-2xl sm:text-3xl font-heading font-black text-white mt-1">
+            IT Service Desk Operations
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Oversee autonomous agent investigations, review pending remediation approvals, and override tickets.
+          <p className="text-xs text-[#a0a0b0] mt-1">
+            Authorize sensitive AI remediation actions, monitor autonomous triage runs, and inspect escalations.
           </p>
         </div>
 
-        <button
+        <CyberButton
+          variant="outline"
           onClick={fetchDeskData}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl glass-panel text-xs text-slate-300 hover:text-white transition-colors"
+          className="min-h-[44px]"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Queue
-        </button>
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>REFRESH DESK QUEUE</span>
+        </CyberButton>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="p-4 rounded-2xl glass-panel border border-slate-800">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Queue Total</p>
-          <p className="text-2xl font-bold text-white mt-1">{tickets.length}</p>
-        </div>
-        <div className="p-4 rounded-2xl glass-panel border border-amber-500/30 bg-amber-500/5">
-          <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Pending Approval</p>
-          <p className="text-2xl font-bold text-amber-400 mt-1">{approvals.length}</p>
-        </div>
-        <div className="p-4 rounded-2xl glass-panel border border-cyan-500/30 bg-cyan-500/5">
-          <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">AI Investigating</p>
-          <p className="text-2xl font-bold text-cyan-400 mt-1">
-            {tickets.filter((t) => t.status === 'INVESTIGATING').length}
-          </p>
-        </div>
-        <div className="p-4 rounded-2xl glass-panel border border-emerald-500/30 bg-emerald-500/5">
-          <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">AI Resolved</p>
-          <p className="text-2xl font-bold text-emerald-400 mt-1">
-            {tickets.filter((t) => t.status === 'RESOLVED').length}
-          </p>
-        </div>
-        <div className="p-4 rounded-2xl glass-panel border border-rose-500/30 bg-rose-500/5">
-          <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider">Escalated</p>
-          <p className="text-2xl font-bold text-rose-400 mt-1">
-            {tickets.filter((t) => t.status === 'ESCALATED').length}
-          </p>
-        </div>
-        <div className="p-4 rounded-2xl glass-panel border border-purple-500/30 bg-purple-500/5">
-          <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">Avg MTTR</p>
-          <p className="text-2xl font-bold text-purple-400 mt-1">4.2 min</p>
-        </div>
-      </div>
-
-      {/* Action Center: Pending Human Approvals */}
+      {/* High-Priority Human Authorization Queue */}
       {approvals.length > 0 && (
-        <div className="rounded-3xl glass-panel border border-amber-500/40 p-6 bg-gradient-to-r from-amber-950/20 to-slate-900 space-y-4">
-          <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-            <ShieldAlert className="w-5 h-5 animate-pulse" />
-            <span>Action Required: {approvals.length} Remediations Pending IT Authorization</span>
+        <div className="bg-[#12121a] border-2 border-[#ff00ff] p-5 shadow-[0_0_20px_rgba(255,0,255,0.25)] cyber-chamfer space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#ff00ff]/30">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-[#ff00ff] animate-pulse" />
+              <h2 className="font-heading font-black text-sm text-white tracking-widest uppercase">
+                // ELEVATED PRIVILEGE ACTION AUTHORIZATION QUEUE ({approvals.length})
+              </h2>
+            </div>
+            <CyberBadge variant="magenta" glow>
+              ACTION REQUIRED
+            </CyberBadge>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-3">
             {approvals.map((appr) => (
               <div
                 key={appr.id}
-                className="p-4 rounded-2xl bg-slate-900/90 border border-slate-700/80 space-y-3"
+                className="bg-[#0a0a0f] border border-[#2a2a3a] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-cyan-400">Ticket #{appr.ticketId}</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">
-                    {appr.riskLevel} RISK
-                  </span>
-                </div>
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-[#ff00ff]">AUTH_REQ: #{appr.id.slice(0, 12)}</span>
+                    <span className="text-[#6b7280]">::</span>
+                    <CyberBadge variant="amber">
+                      RISK: {appr.riskLevel || 'MEDIUM'}
+                    </CyberBadge>
+                    <span className="text-[#6b7280]">::</span>
+                    <span className="text-xs text-[#00ff88] font-bold">TOOL: {appr.toolName}</span>
+                  </div>
 
-                <div>
-                  <h4 className="font-bold text-white text-sm">Execute: {appr.toolName}</h4>
-                  <p className="text-xs text-slate-300 mt-0.5">
-                    Proposed Tool Input: {JSON.stringify(appr.toolInput)}
+                  <p className="text-xs text-[#e0e0e0]">
+                    Action Type: <span className="font-bold text-white">{appr.actionType}</span>
                   </p>
+
+                  <div className="text-[11px] text-[#6b7280]">
+                    Parameters: <span className="text-[#00d4ff]">{JSON.stringify(appr.toolInput)}</span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
-                  <button
+                <div className="flex items-center gap-3 shrink-0">
+                  <CyberButton
+                    variant="cta"
+                    size="sm"
                     onClick={() => handleApprove(appr.id)}
-                    className="flex-1 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition-all"
                   >
-                    ✓ Authorize Action
-                  </button>
-                  <button
+                    <Check className="w-3.5 h-3.5" />
+                    <span>AUTHORIZE &amp; EXECUTE</span>
+                  </CyberButton>
+
+                  <CyberButton
+                    variant="destructive"
+                    size="sm"
                     onClick={() => handleReject(appr.id)}
-                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-rose-300 text-xs font-semibold border border-slate-700 transition-all"
                   >
-                    ✕ Reject
-                  </button>
-                  <Link
-                    href={`/tickets/${appr.ticketId}`}
-                    className="p-2 rounded-xl bg-slate-800 hover:text-cyan-400 text-slate-400 transition-colors"
-                    title="View Evidence Dossier"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </Link>
+                    <X className="w-3.5 h-3.5" />
+                    <span>DENY</span>
+                  </CyberButton>
                 </div>
               </div>
             ))}
@@ -194,24 +182,24 @@ export default function ITDeskDashboard() {
         </div>
       )}
 
-      {/* Triage Queue Table */}
+      {/* Ticket Queue with Cyber Filter Controls */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Filter className="w-4 h-4 text-cyan-400" />
-            Incident Triage & Investigation Queue
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#2a2a3a]">
+          <h2 className="text-sm font-bold uppercase text-white tracking-wider flex items-center gap-2">
+            <Terminal className="w-4 h-4 text-[#00ff88]" />
+            <span>GLOBAL INCIDENT QUEUE ({filteredTickets.length})</span>
           </h2>
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            {['ALL', 'AWAITING_APPROVAL', 'INVESTIGATING', 'OPEN', 'RESOLVED', 'ESCALATED'].map((status) => (
+          <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+            {['ALL', 'INVESTIGATING', 'AWAITING_APPROVAL', 'RESOLVED', 'ESCALATED'].map((status) => (
               <button
                 key={status}
                 onClick={() => setFilterStatus(status)}
-                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all shrink-0 ${
+                className={`px-3 py-1.5 uppercase font-bold text-[10px] tracking-wider transition-all border ${
                   filterStatus === status
-                    ? 'bg-cyan-500 text-slate-950 font-bold'
-                    : 'glass-panel text-slate-300 hover:text-white'
+                    ? 'bg-[#00ff88]/15 border-[#00ff88] text-[#00ff88]'
+                    : 'bg-[#12121a] border-[#2a2a3a] text-[#6b7280] hover:text-[#e0e0e0]'
                 }`}
               >
                 {status.replace('_', ' ')}
@@ -220,63 +208,51 @@ export default function ITDeskDashboard() {
           </div>
         </div>
 
-        <div className="glass-panel rounded-3xl border border-slate-800/80 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900/80 text-slate-400 font-mono text-[11px] uppercase border-b border-slate-800">
-                <tr>
-                  <th className="py-3.5 px-4">Ticket</th>
-                  <th className="py-3.5 px-4">Problem</th>
-                  <th className="py-3.5 px-4">Category</th>
-                  <th className="py-3.5 px-4">Priority</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4">Created</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                {filteredTickets.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-cyan-400">{t.ticketNumber}</td>
-                    <td className="py-3.5 px-4 font-medium text-white max-w-xs truncate">{t.title}</td>
-                    <td className="py-3.5 px-4">{t.category}</td>
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2 py-0.5 rounded font-mono font-bold text-[10px] ${
-                        t.priority === 'CRITICAL' ? 'bg-rose-500/20 text-rose-300' : 'bg-slate-800 text-slate-300'
-                      }`}>
-                        {t.priority}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full font-semibold text-[11px] ${
-                        t.status === 'RESOLVED'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : t.status === 'AWAITING_APPROVAL'
-                          ? 'bg-amber-500/20 text-amber-400 animate-pulse'
-                          : t.status === 'ESCALATED'
-                          ? 'bg-rose-500/20 text-rose-400'
-                          : 'bg-cyan-500/20 text-cyan-400'
-                      }`}>
-                        {t.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-400">
-                      {new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <Link
-                        href={`/tickets/${t.id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-cyan-500 hover:text-slate-950 text-cyan-400 font-semibold transition-all"
-                      >
-                        <span>Investigate</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {/* Tickets Table */}
+        <div className="space-y-2">
+          {filteredTickets.map((t) => (
+            <div
+              key={t.id}
+              className="bg-[#12121a] border border-[#2a2a3a] hover:border-[#00ff88] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cyber-chamfer-sm transition-all group"
+            >
+              <div className="space-y-1 flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-[#00ff88]">{t.ticketNumber}</span>
+                  <span className="text-[#6b7280]">•</span>
+                  <span className="text-xs text-[#00d4ff] uppercase">{t.category}</span>
+                  <span className="text-[#6b7280]">•</span>
+                  <CyberBadge
+                    variant={t.priority === 'HIGH' || t.priority === 'CRITICAL' ? 'red' : 'green'}
+                  >
+                    {t.priority}
+                  </CyberBadge>
+                  {t.errorCode && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-[#0a0a0f] text-[#f59e0b] border border-[#f59e0b]/30">
+                      {t.errorCode}
+                    </span>
+                  )}
+                </div>
+
+                <h3 className="font-heading font-bold text-sm text-white group-hover:text-[#00ff88] transition-colors truncate">
+                  {t.title}
+                </h3>
+
+                <p className="text-xs text-[#6b7280] truncate max-w-xl">
+                  {t.description}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4 shrink-0">
+                <CyberStatus status={t.status as any} />
+                <Link href={`/tickets/${t.id}`}>
+                  <CyberButton variant="primary" size="sm">
+                    <span>TRIAGE CONSOLE</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </CyberButton>
+                </Link>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

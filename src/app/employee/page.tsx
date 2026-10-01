@@ -14,9 +14,21 @@ import {
   ArrowRight,
   RefreshCw,
   Search,
-  Filter
+  Filter,
+  Terminal,
+  Activity,
+  Cpu,
+  Lock,
+  UserCheck
 } from 'lucide-react';
 import { Ticket } from '@/types';
+import { 
+  CyberButton, 
+  CyberBadge, 
+  CyberPanel, 
+  CyberStatus, 
+  CyberInput 
+} from '@/components/ui/cyber';
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
@@ -104,264 +116,256 @@ export default function EmployeeDashboard() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'INVESTIGATING':
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">AI Investigating</span>;
-      case 'AWAITING_APPROVAL':
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30 animate-pulse">Approval Required</span>;
-      case 'RESOLVED':
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Resolved</span>;
-      case 'ESCALATED':
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30">Escalated</span>;
-      default:
-        return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">Open</span>;
-    }
-  };
-
   return (
-    <div className="space-y-8">
-      {/* Top Banner: Employee Context & Status */}
-      <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                Welcome back, {user?.name || 'Employee'}
-              </h1>
-              {accountInfo && (
-                <span
-                  className={`text-xs font-mono font-bold px-2.5 py-1 rounded-full border ${
-                    accountInfo.accountStatus === 'LOCKED'
-                      ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse'
-                      : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                  }`}
-                >
-                  Account: {accountInfo.accountStatus}
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-slate-400 max-w-2xl">
-              Cyberdyne Systems Self-Service IT Desk with Autonomous AI Triage. Submit any IT problem, and the AutoDesk agent will immediately diagnose, test, and request approved fixes.
-            </p>
+    <div className="space-y-8 font-mono">
+      {/* Top Banner: Employee Operations Console */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#2a2a3a] pb-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2 py-0.5 bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/30">
+              EMPLOYEE SELF-SERVICE HUD
+            </span>
           </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold text-sm shadow-xl shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-            >
-              <PlusCircle className="w-5 h-5" />
-              Create Support Ticket
-            </button>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-heading font-black text-white mt-1">
+            IT Incident & Support Console
+          </h1>
+          <p className="text-xs text-[#a0a0b0] mt-1">
+            Log technical disruptions, track autonomous AI investigations, and review account states.
+          </p>
         </div>
 
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-800/80">
-          <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/60">
-            <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Total Tickets</p>
-            <p className="text-2xl font-bold text-white mt-1">{tickets.length}</p>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/60">
-            <p className="text-[11px] text-cyan-400 font-semibold uppercase tracking-wider">Active Investigations</p>
-            <p className="text-2xl font-bold text-cyan-400 mt-1">
-              {tickets.filter((t) => t.status === 'INVESTIGATING' || t.status === 'OPEN').length}
-            </p>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/60">
-            <p className="text-[11px] text-amber-400 font-semibold uppercase tracking-wider">Pending Approval</p>
-            <p className="text-2xl font-bold text-amber-400 mt-1">
-              {tickets.filter((t) => t.status === 'AWAITING_APPROVAL').length}
-            </p>
-          </div>
-          <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/60">
-            <p className="text-[11px] text-emerald-400 font-semibold uppercase tracking-wider">Resolved</p>
-            <p className="text-2xl font-bold text-emerald-400 mt-1">
-              {tickets.filter((t) => t.status === 'RESOLVED').length}
-            </p>
-          </div>
+        <div className="flex items-center gap-3">
+          <CyberButton
+            variant="cta"
+            onClick={() => setShowCreateModal(true)}
+            className="min-h-[44px]"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>REPORT NEW INCIDENT</span>
+          </CyberButton>
+
+          <CyberButton
+            variant="outline"
+            onClick={fetchTickets}
+            className="min-h-[44px]"
+            title="Refresh incident list"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </CyberButton>
         </div>
       </div>
 
-      {/* Ticket List Header */}
+      {/* Account & Device Diagnostics HUD Widget */}
+      {accountInfo && (
+        <div className="bg-[#12121a] border border-[#2a2a3a] p-4 cyber-chamfer">
+          <div className="flex items-center justify-between pb-3 border-b border-[#2a2a3a]">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#00ff88] uppercase">
+              <UserCheck className="w-4 h-4" />
+              <span>ACTIVE DIRECTORY IDENTITY STATE &amp; DEVICE DIAGNOSTICS</span>
+            </div>
+            <span className="text-[10px] text-[#6b7280]">UID: {accountInfo.id}</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3 text-xs">
+            <div className="bg-[#0a0a0f] border border-[#2a2a3a] p-3">
+              <span className="text-[10px] text-[#6b7280] uppercase block mb-1">ACCOUNT STATUS</span>
+              <span
+                className={`font-bold ${
+                  accountInfo.accountStatus === 'LOCKED'
+                    ? 'text-[#ff3366] text-neon-red'
+                    : 'text-[#00ff88]'
+                }`}
+              >
+                {accountInfo.accountStatus}
+              </span>
+            </div>
+
+            <div className="bg-[#0a0a0f] border border-[#2a2a3a] p-3">
+              <span className="text-[10px] text-[#6b7280] uppercase block mb-1">FAILED LOGINS</span>
+              <span className="text-white font-bold">{accountInfo.failedLoginCount || 0} ATTEMPTS</span>
+            </div>
+
+            <div className="bg-[#0a0a0f] border border-[#2a2a3a] p-3">
+              <span className="text-[10px] text-[#6b7280] uppercase block mb-1">MFA AUTHENTICATION</span>
+              <span className="text-[#00d4ff] font-bold">
+                {accountInfo.mfaEnabled ? 'ENABLED (TOTP)' : 'DISABLED'}
+              </span>
+            </div>
+
+            <div className="bg-[#0a0a0f] border border-[#2a2a3a] p-3">
+              <span className="text-[10px] text-[#6b7280] uppercase block mb-1">PRIMARY DEVICE</span>
+              <span className="text-white font-bold">{accountInfo.primaryDeviceId || 'CORP-MBP-089'}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Incidents Table / HUD Grid */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <HelpCircle className="w-5 h-5 text-cyan-400" />
-            My Support Incidents
+          <h2 className="text-sm font-bold uppercase text-white tracking-wider flex items-center gap-2">
+            <Terminal className="w-4 h-4 text-[#00ff88]" />
+            <span>ACTIVE IT INCIDENT LOGS ({tickets.length})</span>
           </h2>
-          <button
-            onClick={fetchTickets}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-panel text-xs text-slate-300 hover:text-white transition-colors"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
         </div>
 
-        {/* Tickets Grid */}
         {tickets.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-3">
             {tickets.map((t) => (
-              <Link
+              <div
                 key={t.id}
-                href={`/tickets/${t.id}`}
-                className="block glass-panel glass-panel-hover rounded-2xl p-5 border border-slate-800/80 group"
+                className="bg-[#12121a] border border-[#2a2a3a] hover:border-[#00ff88] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cyber-chamfer-sm transition-all hover:shadow-[0_0_12px_rgba(0,255,136,0.15)] group"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-bold text-cyan-400">{t.ticketNumber}</span>
-                      <span className="text-slate-600">•</span>
-                      <span className="text-xs font-semibold text-slate-400">{t.category}</span>
-                      <span className="text-slate-600">•</span>
-                      {getStatusBadge(t.status)}
-                    </div>
-                    <h3 className="font-bold text-white text-base group-hover:text-cyan-400 transition-colors">
-                      {t.title}
-                    </h3>
-                    <p className="text-xs text-slate-400 line-clamp-1">{t.description}</p>
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-[#00ff88]">{t.ticketNumber}</span>
+                    <span className="text-[#6b7280]">•</span>
+                    <span className="text-xs text-[#00d4ff] uppercase">{t.category}</span>
+                    <span className="text-[#6b7280]">•</span>
+                    <CyberBadge
+                      variant={t.priority === 'HIGH' || t.priority === 'CRITICAL' ? 'red' : 'green'}
+                    >
+                      {t.priority}
+                    </CyberBadge>
+                    {t.errorCode && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-[#0a0a0f] text-[#f59e0b] border border-[#f59e0b]/40">
+                        {t.errorCode}
+                      </span>
+                    )}
                   </div>
-
-                  <div className="flex items-center gap-4 text-xs text-slate-400 shrink-0">
-                    <span className="hidden sm:inline font-mono">
-                      {new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <div className="flex items-center gap-1 text-cyan-400 font-semibold group-hover:translate-x-1 transition-transform">
-                      <span>Inspect Agent Run</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </div>
-                  </div>
+                  <h3 className="font-heading font-bold text-sm text-white group-hover:text-[#00ff88] transition-colors truncate">
+                    {t.title}
+                  </h3>
+                  <p className="text-xs text-[#6b7280] truncate max-w-xl">
+                    {t.description}
+                  </p>
                 </div>
-              </Link>
+
+                <div className="flex items-center gap-4 shrink-0">
+                  <CyberStatus status={t.status as any} />
+                  <Link href={`/tickets/${t.id}`}>
+                    <CyberButton variant="primary" size="sm">
+                      <span>INSPECT</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </CyberButton>
+                  </Link>
+                </div>
+              </div>
             ))}
           </div>
         ) : (
-          <div className="p-12 rounded-3xl glass-panel text-center space-y-4">
-            <HelpCircle className="w-12 h-12 text-slate-600 mx-auto" />
-            <div>
-              <p className="text-base font-bold text-white">No active support tickets</p>
-              <p className="text-xs text-slate-400 mt-1">Submit your first IT incident or choose a demo scenario.</p>
-            </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs"
-            >
-              Create Ticket
-            </button>
+          <div className="p-12 bg-[#12121a] border border-[#2a2a3a] text-center space-y-3 cyber-chamfer">
+            <HelpCircle className="w-10 h-10 text-[#6b7280] mx-auto" />
+            <p className="text-sm font-bold text-white">// NO INCIDENTS RECORDED FOR THIS USER</p>
+            <p className="text-xs text-[#6b7280] max-w-md mx-auto">
+              Click &quot;Report New Incident&quot; above to log an IT issue and observe the autonomous AI triage loop.
+            </p>
           </div>
         )}
       </div>
 
-      {/* Create Ticket Modal */}
+      {/* Cyberpunk Incident Creation Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="glass-panel rounded-3xl p-6 sm:p-8 max-w-xl w-full border border-slate-700 shadow-2xl space-y-6 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-bold text-white">Report IT Incident</h3>
+        <div className="fixed inset-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12121a] border-2 border-[#00ff88] p-6 max-w-lg w-full shadow-[0_0_30px_rgba(0,255,136,0.25)] cyber-chamfer space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-[#2a2a3a]">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-[#00ff88]" />
+                <h2 className="font-heading font-black text-sm text-white tracking-wider uppercase">
+                  // LOG NEW IT INCIDENT
+                </h2>
+              </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-white text-sm"
+                className="text-[#6b7280] hover:text-white font-bold"
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleCreateTicket} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                  Problem Title
+              <CyberInput
+                label="INCIDENT TITLE / SUMMARY"
+                placeholder="e.g. Cannot connect to corporate VPN"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+
+              <div className="space-y-1.5">
+                <label className="block text-[11px] uppercase tracking-wider text-[#6b7280]">
+                  PROBLEM DESCRIPTION &amp; SYMPTOMS
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Can't access HR portal, says authentication failed"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-cyan-400"
-                />
+                <div className="relative flex items-start bg-[#0a0a0f] border border-[#2a2a3a] focus-within:border-[#00ff88] p-2.5">
+                  <textarea
+                    rows={3}
+                    placeholder="Describe error symptoms, what happened, when it started..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full bg-transparent text-xs text-[#e0e0e0] placeholder-[#6b7280] focus:outline-none resize-none font-mono"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Category
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] uppercase tracking-wider text-[#6b7280]">
+                    CATEGORY
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-cyan-400"
+                    className="w-full bg-[#0a0a0f] border border-[#2a2a3a] text-xs text-[#e0e0e0] px-3 py-2 focus:outline-none focus:border-[#00ff88] font-mono"
                   >
-                    <option value="Authentication">Authentication / SSO</option>
-                    <option value="VPN">VPN & Network</option>
-                    <option value="Password">Password & Security</option>
-                    <option value="Application">Application / Software</option>
-                    <option value="Device">Device & Hardware</option>
-                    <option value="Other">Other Infrastructure</option>
+                    <option value="Authentication">Authentication</option>
+                    <option value="VPN">VPN &amp; Network</option>
+                    <option value="Hardware">Hardware / Device</option>
+                    <option value="Software">Software &amp; Access</option>
+                    <option value="Other">Other / Infrastructure</option>
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                    Priority
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] uppercase tracking-wider text-[#6b7280]">
+                    SEVERITY PRIORITY
                   </label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-cyan-400"
+                    className="w-full bg-[#0a0a0f] border border-[#2a2a3a] text-xs text-[#e0e0e0] px-3 py-2 focus:outline-none focus:border-[#00ff88] font-mono"
                   >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="CRITICAL">Critical</option>
+                    <option value="LOW">LOW</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="HIGH">HIGH</option>
+                    <option value="CRITICAL">CRITICAL</option>
                   </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                  Description of Issue & Error Messages
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe what happened, any error messages displayed, and steps taken..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-cyan-400"
-                />
-              </div>
+              <CyberInput
+                label="OPTIONAL ERROR CODE / SYMPTOM ID"
+                placeholder="e.g. ERR_AUTH_042 or TLS-handshake-timeout"
+                value={errorCode}
+                onChange={(e) => setErrorCode(e.target.value)}
+              />
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                  Optional Error Code (e.g. ERR_AUTH_042)
-                </label>
-                <input
-                  type="text"
-                  value={errorCode}
-                  onChange={(e) => setErrorCode(e.target.value)}
-                  placeholder="ERR_AUTH_042"
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-cyan-400 font-mono"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-                <button
+              <div className="pt-3 border-t border-[#2a2a3a] flex items-center justify-end gap-3">
+                <CyberButton
                   type="button"
+                  variant="outline"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
                 >
-                  Cancel
-                </button>
-                <button
+                  CANCEL
+                </CyberButton>
+                <CyberButton
                   type="submit"
+                  variant="cta"
                   disabled={isSubmitting}
-                  className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-lg shadow-cyan-500/20 transition-all disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Dispatching to AI Agent...' : 'Submit & Start Autonomous Triage'}
-                </button>
+                  <PlusCircle className="w-4 h-4" />
+                  <span>{isSubmitting ? 'DISPATCHING...' : 'DISPATCH TO AI AGENT'}</span>
+                </CyberButton>
               </div>
             </form>
           </div>

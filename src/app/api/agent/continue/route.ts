@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resumeAgentAfterApproval } from '@/lib/agent/orchestrator';
-import { getAuthenticatedUser } from '@/lib/auth/session';
+import { requireAuth, forbiddenResponse, handleAuthError } from '@/lib/auth/server';
+import { canApproveRiskLevel, hasMinimumRole } from '@/lib/auth/rbac';
+import { getDatabase } from '@/lib/db';
 import { z } from 'zod';
 
 const ContinueSchema = z.object({
@@ -12,7 +14,7 @@ const ContinueSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
+    const user = await requireAuth(req);
     const body = await req.json();
     const validated = ContinueSchema.safeParse(body);
 
@@ -21,6 +23,26 @@ export async function POST(req: NextRequest) {
         { success: false, error: 'Invalid parameters', details: validated.error.issues },
         { status: 400 }
       );
+    }
+
+    const db = getDatabase();
+    const appr = db.prepare('SELECT * FROM approvals WHERE id = ?').get(validated.data.approvalId) as any;
+    if (!appr) {
+      return NextResponse.json({ success: false, error: 'Approval request not found' }, { status: 404 });
+    }
+
+    if (validated.data.approved) {
+      if (!canApproveRiskLevel(user.role, appr.risk_level)) {
+        return forbiddenResponse(
+          `Access denied: Role '${user.role}' is not authorized to approve ${appr.risk_level}-risk actions.`
+        );
+      }
+    } else {
+      if (!hasMinimumRole(user.role, 'IT_AGENT')) {
+        return forbiddenResponse(
+          `Access denied: Rejecting operational actions requires IT clearance.`
+        );
+      }
     }
 
     const result = await resumeAgentAfterApproval(
@@ -36,9 +58,13 @@ export async function POST(req: NextRequest) {
       result,
     });
   } catch (error: any) {
+    const authResp = handleAuthError(error);
+    if (authResp) return authResp;
+
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to resume agent' },
       { status: 500 }
     );
   }
 }
+

@@ -16,8 +16,17 @@ import {
   Wrench,
   HelpCircle,
   Layers,
-  ChevronRight
+  Zap,
+  Radio,
+  Workflow,
+  Server
 } from 'lucide-react';
+import { 
+  CyberButton, 
+  CyberBadge, 
+  CyberPanel, 
+  CyberTerminal 
+} from '@/components/ui/cyber';
 
 export default function HomePage() {
   const { user, personas, switchUser } = useAuth();
@@ -25,8 +34,8 @@ export default function HomePage() {
   const DEMO_SCENARIOS = [
     {
       id: 'tkt_1042',
-      badge: 'PRIMARY DEMO SCENARIO',
-      badgeColor: 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10',
+      badge: 'PRIMARY DEMO // SOP-104',
+      badgeVariant: 'green' as const,
       title: 'HR Portal Authentication Failure',
       user: 'Sarah Connor (Employee)',
       userId: 'usr_emp_01',
@@ -40,12 +49,12 @@ export default function HomePage() {
         'Verification: account = ACTIVE',
         'close_ticket (RESOLVED)',
       ],
-      description: 'Demonstrates multi-source evidence triage, account lock detection, human authorization, and automated post-fix verification.',
+      description: 'Demonstrates multi-source evidence triage, Active Directory lockout detection, human authorization intercept, and post-fix verification.',
     },
     {
       id: 'tkt_1043',
-      badge: 'ALTERNATIVE PATH DEMO',
-      badgeColor: 'border-indigo-500/40 text-indigo-400 bg-indigo-500/10',
+      badge: 'DYNAMIC NETWORK TRIAGE // SOP-209',
+      badgeVariant: 'cyan' as const,
       title: 'VPN Stopped Connecting (TLS Timeout)',
       user: 'David Lightman (Employee)',
       userId: 'usr_emp_02',
@@ -59,179 +68,184 @@ export default function HomePage() {
         'Verification: handshake verified',
         'close_ticket (RESOLVED)',
       ],
-      description: 'Proves the agent dynamically selects a completely different set of network/device tools rather than following a fixed workflow.',
+      description: 'Proves the agent dynamically selects a completely different set of network/device tools rather than following a static tree.',
     },
     {
       id: 'tkt_1044',
-      badge: 'INFRASTRUCTURE ESCALATION',
-      badgeColor: 'border-rose-500/40 text-rose-400 bg-rose-500/10',
+      badge: 'INFRASTRUCTURE OUTAGE // SOP-999',
+      badgeVariant: 'red' as const,
       title: 'Internal Git Server 502 Bad Gateway',
       user: 'David Lightman (Employee)',
       userId: 'usr_emp_02',
       problem: 'Internal Git server returning 502 Bad Gateway on push.',
       trajectory: [
         'check_system_status (internal-git = OUTAGE)',
-        'Evaluate policy: SOP-999',
-        'Formulate Tier-3 handoff dossier',
+        'Evaluate policy: SOP-999 boundary',
+        'Formulate Tier-3 DevOps handoff dossier',
         'escalate_ticket (ESCALATED)',
       ],
-      description: 'Demonstrates graceful, immediate escalation to Tier-3 DevOps when infrastructure outages are beyond L1 autonomous scope.',
+      description: 'Demonstrates graceful, immediate escalation to Tier-3 DevOps when infrastructure outages are beyond L1 autonomous remediation scope.',
     },
   ];
 
   return (
-    <div className="space-y-16 py-4">
-      {/* Hero Section */}
-      <div className="text-center max-w-4xl mx-auto space-y-6">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-panel border border-cyan-500/30 text-xs font-semibold text-cyan-300">
-          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Real Agentic AI — Not A Rule Bot, Chatbot, Or Hardcoded Tree</span>
-        </div>
-
-        <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight">
-          AI IT Service Desk <br />
-          <span className="gradient-text">Autonomous Resolution Agent</span>
-        </h1>
-
-        <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-          An evidence-driven Helpdesk agent that dynamically queries knowledge runbooks, checks enterprise systems, investigates accounts, requests human approvals for sensitive actions, and verifies resolution before closing tickets.
-        </p>
-
-        {/* Quick CTA Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-          <Link
-            href="/tickets/tkt_1042"
-            className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold text-sm shadow-xl shadow-cyan-500/25 hover:scale-105 transition-all"
-          >
-            <Cpu className="w-5 h-5" />
-            <span>Launch Primary Demo (#INC-1042)</span>
-            <ArrowRight className="w-4 h-4 ml-1" />
-          </Link>
-          <Link
-            href="/employee"
-            className="flex items-center gap-2 px-6 py-3.5 rounded-2xl glass-panel text-slate-200 hover:text-white font-semibold text-sm border border-slate-700 hover:border-slate-500 transition-all"
-          >
-            <HelpCircle className="w-4 h-4 text-cyan-400" />
-            <span>Employee Portal</span>
-          </Link>
-          <Link
-            href="/it-desk"
-            className="flex items-center gap-2 px-6 py-3.5 rounded-2xl glass-panel text-slate-200 hover:text-white font-semibold text-sm border border-slate-700 hover:border-slate-500 transition-all"
-          >
-            <Wrench className="w-4 h-4 text-blue-400" />
-            <span>IT Agent Workbench</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Core Dynamic Differentiator Section */}
-      <div className="p-8 rounded-3xl glass-panel border border-slate-800 bg-gradient-to-br from-slate-900/90 to-slate-950 space-y-6">
-        <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-wider">
-          <Terminal className="w-4 h-4" />
-          <span>The Core Agentic Requirement</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-white">
-              Dynamic Tool Selection Based on Evolving Evidence
-            </h2>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              AutoDesk AI does <strong className="text-white">not</strong> blindly execute the same sequence of steps. Each action evaluates the problem statement, prior tool responses, policy permissions, and hypothesis state:
-            </p>
-            <ul className="space-y-2 text-xs text-slate-300">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span><strong>No Fixed Workflows:</strong> VPN problems check networks; auth problems check lockout policies.</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span><strong>Zero Privilege Escalation:</strong> The LLM never touches raw infrastructure. All tools route through the Policy Engine.</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span><strong>Automated Verification:</strong> Tickets are never marked resolved without proof that the fix worked.</span>
-              </li>
-            </ul>
+    <div className="space-y-12 py-4">
+      {/* HUD Header / Hero Section */}
+      <div className="relative border-b border-[#2a2a3a] pb-10">
+        <div className="flex flex-col items-center text-center max-w-4xl mx-auto space-y-5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#12121a] border border-[#00ff88]/40 text-[#00ff88] text-[11px] font-mono uppercase tracking-widest font-bold">
+            <Radio className="w-3.5 h-3.5 animate-pulse" />
+            <span>REAL AGENTIC AI // NOT A CHATBOT OR HARDCODED DECISION TREE</span>
           </div>
 
-          <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 font-mono text-xs space-y-3">
-            <div className="flex items-center justify-between text-slate-500 text-[10px] pb-2 border-b border-slate-800">
-              <span>EVIDENCE DECISION GRAPH</span>
-              <span className="text-emerald-400 font-bold">STATE: EVALUATING</span>
-            </div>
-            <div className="space-y-1.5 text-slate-300">
-              <p><span className="text-cyan-400">1. INPUT:</span> &quot;Can&apos;t access HR portal, authentication failed&quot;</p>
-              <p><span className="text-indigo-400">2. HYPOTHESIS:</span> Outage vs. Stale Token vs. Account Lock</p>
-              <p><span className="text-emerald-400">3. TOOL 1:</span> search_knowledge_base &rarr; SOP-104 retrieved</p>
-              <p><span className="text-emerald-400">4. TOOL 2:</span> check_system_status &rarr; HR portal OPERATIONAL</p>
-              <p><span className="text-emerald-400">5. TOOL 3:</span> check_user_account &rarr; LOCKED (5 bad logins)</p>
-              <p><span className="text-amber-400">6. DECISION:</span> Request approval to unlock_account</p>
-            </div>
-          </div>
-        </div>
-      </div>
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-wider uppercase leading-none">
+            AI IT SERVICE DESK <br />
+            <span className="text-neon-green glitch-text">AUTONOMOUS AGENT</span>
+          </h1>
 
-      {/* Demo Scenarios Grid */}
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-extrabold text-white">Interactive Hackathon Demo Scenarios</h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Click on any scenario to inspect the autonomous agent trajectory, test human approval, or trigger fresh triage.
+          <p className="text-xs sm:text-sm font-mono text-[#a0a0b0] max-w-2xl mx-auto leading-relaxed">
+            Evidence-driven autonomous Helpdesk intelligence that dynamically investigates knowledge runbooks, inspects enterprise infrastructure, audits user states, halts for human approval on high-risk actions, and verifies resolution before closing tickets.
           </p>
+
+          {/* Quick CTA Actions */}
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-3 font-mono">
+            <Link href="/tickets/tkt_1042">
+              <CyberButton variant="cta" size="lg">
+                <Cpu className="w-5 h-5" />
+                <span>LAUNCH PRIMARY DEMO (#INC-1042)</span>
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </CyberButton>
+            </Link>
+            <Link href="/employee">
+              <CyberButton variant="outline" size="lg">
+                <HelpCircle className="w-4 h-4 text-[#00ff88]" />
+                <span>EMPLOYEE PORTAL</span>
+              </CyberButton>
+            </Link>
+            <Link href="/it-desk">
+              <CyberButton variant="outline" size="lg">
+                <Wrench className="w-4 h-4 text-[#00d4ff]" />
+                <span>IT WORKBENCH</span>
+              </CyberButton>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Cyber Operations Console: Live Demo Scenarios */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between border-b border-[#2a2a3a] pb-3">
+          <div>
+            <h2 className="text-lg font-black text-white tracking-widest uppercase">
+              // VERIFIED AUTONOMOUS DEMO SCENARIOS
+            </h2>
+            <p className="text-xs font-mono text-[#6b7280]">
+              Click any ticket scenario to observe dynamic tool selection and policy execution
+            </p>
+          </div>
+          <CyberBadge variant="green" glow>
+            3 SCENARIOS READY
+          </CyberBadge>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {DEMO_SCENARIOS.map((demo) => (
+          {DEMO_SCENARIOS.map((scen) => (
             <div
-              key={demo.id}
-              className="glass-panel glass-panel-hover rounded-3xl p-6 border border-slate-800/90 flex flex-col justify-between space-y-5"
+              key={scen.id}
+              className="bg-[#12121a] border border-[#2a2a3a] hover:border-[#00ff88] p-5 flex flex-col justify-between space-y-4 cyber-chamfer transition-all hover:shadow-[0_0_15px_rgba(0,255,136,0.15)] group"
             >
-              <div className="space-y-4">
-                <span className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${demo.badgeColor}`}>
-                  {demo.badge}
-                </span>
-
-                <div>
-                  <h3 className="text-lg font-bold text-white">{demo.title}</h3>
-                  <p className="text-xs text-cyan-400 mt-0.5">Reported by {demo.user}</p>
+              <div className="space-y-3 font-mono">
+                <div className="flex items-center justify-between">
+                  <CyberBadge variant={scen.badgeVariant}>
+                    {scen.badge}
+                  </CyberBadge>
+                  <span className="text-[10px] text-[#6b7280] font-bold">#{scen.id}</span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs italic text-slate-300">
-                  &quot;{demo.problem}&quot;
+                <h3 className="font-heading font-black text-base text-white group-hover:text-[#00ff88] transition-colors">
+                  {scen.title}
+                </h3>
+
+                <div className="p-2.5 bg-[#0a0a0f] border border-[#2a2a3a] text-xs space-y-1">
+                  <span className="text-[10px] text-[#6b7280] block font-bold">SUBMITTER: {scen.user}</span>
+                  <p className="text-[#e0e0e0] italic">&ldquo;{scen.problem}&rdquo;</p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-mono text-slate-400 uppercase font-bold tracking-wider">
-                    Observed Tool Trajectory:
-                  </p>
+                {/* Trajectory visualization */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[10px] text-[#6b7280] uppercase font-bold block">
+                    DYNAMIC AGENT TRAJECTORY:
+                  </span>
                   <div className="space-y-1">
-                    {demo.trajectory.map((step, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 text-xs text-slate-300 font-mono">
-                        <span className="text-slate-600 text-[10px]">{idx + 1}.</span>
-                        <span className={step.includes('Approval') ? 'text-amber-400 font-bold' : step.includes('close_ticket') ? 'text-emerald-400 font-bold' : step.includes('escalate') ? 'text-rose-400 font-bold' : ''}>
-                          {step}
+                    {scen.trajectory.map((step, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-[11px] text-[#a0a0b0]">
+                        <span className="text-[9px] text-[#00ff88] font-bold font-mono">
+                          0{idx + 1}&gt;
                         </span>
+                        <span className="truncate">{step}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-400">{demo.description}</p>
+                <p className="text-xs text-[#6b7280] pt-2 border-t border-[#2a2a3a]">
+                  {scen.description}
+                </p>
               </div>
 
-              <div className="pt-4 border-t border-slate-800/80">
-                <Link
-                  href={`/tickets/${demo.id}`}
-                  onClick={() => switchUser(demo.userId)}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 hover:bg-cyan-500 hover:text-slate-950 text-cyan-400 font-bold text-xs transition-all"
-                >
-                  <span>Launch & Run Scenario</span>
-                  <ChevronRight className="w-4 h-4" />
+              <div className="pt-2">
+                <Link href={`/tickets/${scen.id}`} className="block">
+                  <CyberButton variant="primary" className="w-full">
+                    <span>INSPECT INCIDENT TRAJECTORY</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </CyberButton>
                 </Link>
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Architecture & Verification Pillars */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 font-mono">
+        <div className="bg-[#12121a] border border-[#2a2a3a] p-4 cyber-chamfer-sm space-y-2">
+          <div className="flex items-center gap-2 text-[#00ff88]">
+            <Cpu className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase">DYNAMIC REACT LOOP</span>
+          </div>
+          <p className="text-xs text-[#a0a0b0]">
+            Autonomous evidence synthesis over live runbooks, network states, and system APIs.
+          </p>
+        </div>
+
+        <div className="bg-[#12121a] border border-[#2a2a3a] p-4 cyber-chamfer-sm space-y-2">
+          <div className="flex items-center gap-2 text-[#ff00ff]">
+            <ShieldCheck className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase">POLICY GUARDRAILS</span>
+          </div>
+          <p className="text-xs text-[#a0a0b0]">
+            Zero privilege escalation. State modifications intercepted for explicit human authorization.
+          </p>
+        </div>
+
+        <div className="bg-[#12121a] border border-[#2a2a3a] p-4 cyber-chamfer-sm space-y-2">
+          <div className="flex items-center gap-2 text-[#00d4ff]">
+            <Workflow className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase">15 EXTENSIBLE TOOLS</span>
+          </div>
+          <p className="text-xs text-[#a0a0b0]">
+            Diagnose networks, query Active Directory, test connectivity, restart services, and clear caches.
+          </p>
+        </div>
+
+        <div className="bg-[#12121a] border border-[#2a2a3a] p-4 cyber-chamfer-sm space-y-2">
+          <div className="flex items-center gap-2 text-[#00ff88]">
+            <Server className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase">GEMINI + FALLBACK</span>
+          </div>
+          <p className="text-xs text-[#a0a0b0]">
+            Live Google Gemini 3.5 Flash Lite engine paired with local zero-dependency reasoning fallback.
+          </p>
         </div>
       </div>
     </div>

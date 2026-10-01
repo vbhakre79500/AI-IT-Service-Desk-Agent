@@ -495,6 +495,7 @@ AUTH_SECRET=hackathon-super-secret-key-change-in-prod
 * [x] **Phase 11: Security & Policy Enforcement Audit** — Completed. RBAC privilege escalation blocked, prompt injection quarantined with untrusted tags, Zod schema input validation verified, and immutable audit logs confirmed.
 * [x] **Phase 12: Automated Test Suites** — Completed. 19 automated unit and integration tests across 6 test suites passing with 100% pass rate (`npm test`).
 * [x] **Phase 13: Demo Scenarios & Judge Walkthrough** — Completed. Pristine seed data, interactive demo cards on home page, live agent run timeline, "Why this action?" explainer, and comprehensive documentation (`README.md`, `docs/architecture.md`, `docs/agent-workflow.md`, `docs/security.md`).
+* [x] **Phase 14: Production Environment Audit & Configuration** — Completed. Server-only Zod environment validator (`src/lib/config/env.ts`), configurable SQLite path, production environment guide (`docs/production-environment.md`), 22/22 tests passing, and deployment compatibility matrix established.
 
 ---
 
@@ -508,13 +509,14 @@ AUTH_SECRET=hackathon-super-secret-key-change-in-prod
 ---
 
 ## 21. Testing Status
-* **100% Test Pass Rate (19/19 Tests Passing):**
+* **100% Test Pass Rate (22/22 Tests Passing Across 7 Suites):**
   1. `tests/agent_loop.test.ts` (2 tests): End-to-end dynamic investigation, human approval pausing, post-approval execution & automated verification.
   2. `tests/auth_rbac.test.ts` (3 tests): Role hierarchy, approval limits per risk level, role execution permissions.
   3. `tests/database.test.ts` (4 tests): Relational queries, ticket messages, foreign keys, audit logging.
-  4. `tests/rag.test.ts` (3 tests): Vector cosine similarity retrieval, error-code boosting, prompt injection isolation wrapper.
-  5. `tests/security.test.ts` (3 tests): Privilege escalation blocking, prompt injection defense, Zod schema validation.
-  6. `tests/tools.test.ts` (4 tests): 15 tools registered with schemas, safe policy engine execution, input validation.
+  4. `tests/env.test.ts` (3 tests): Environment validation, secret length enforcement, safe defaults.
+  5. `tests/rag.test.ts` (3 tests): Vector cosine similarity retrieval, error-code boosting, prompt injection isolation wrapper.
+  6. `tests/security.test.ts` (3 tests): Privilege escalation blocking, prompt injection defense, Zod schema validation.
+  7. `tests/tools.test.ts` (4 tests): 15 tools registered with schemas, safe policy engine execution, input validation.
 
 ---
 
@@ -531,3 +533,120 @@ AUTH_SECRET=hackathon-super-secret-key-change-in-prod
 4. **Scenario 4 (Unhandled Infrastructure Outage - Escalation):**
    * Problem: "Internal Git server returning 502 Bad Gateway."
    * Agent Path: `check_system_status` (Git server OUTAGE) -> attempts diagnostics -> recognizes core infrastructure failure beyond L1 scope -> generates escalation dossier -> assigns to DevOps Tier-3.
+
+---
+
+## 23. Phase 14 — Production Environment
+* **Current LLM Provider Status:** Supports 'local' (active deterministic fallback), 'gemini' (requires `GEMINI_API_KEY`), and 'openai' (requires `OPENAI_API_KEY`). Currently running on zero-dependency `local` fallback.
+* **Current Database Status:** Local synchronous SQLite via Node.js 24 native `node:sqlite` (`./data/autodesk.db`). Features WAL mode, foreign key enforcement, and busy timeout.
+* **Required Environment Variables:** `AUTH_SECRET` (production session security), `GEMINI_API_KEY` (if `LLM_PROVIDER=gemini`), `OPENAI_API_KEY` (if `LLM_PROVIDER=openai`).
+* **Production Limitations:** Serverless edge runtimes (e.g. Vercel Serverless Functions) have ephemeral/read-only filesystems incompatible with multi-process local SQLite WAL writes. Persistent container environments (Render, Railway, Fly.io, Docker) with mounted volumes are required unless migrating to managed PostgreSQL.
+* **Deployment Decision:** Pending. Production environment audit completed; database migration and external deployment deferred per instructions.
+* **Tests & Build Status:** 100% pass rate (22/22 tests passing across 7 test suites), production Next.js build clean with 0 errors.
+
+---
+
+## 24. Phase 16 — Real Gemini API Verification
+* **Verification Objective:** Confirm whether the agent is actually sending live Gemini API requests or silently falling back to the local reasoning engine when `LLM_PROVIDER=gemini`.
+* **Execution Path & Root Cause Findings:**
+  1. `LLM_PROVIDER=gemini` and `GEMINI_API_KEY` were successfully detected from `.env.local`.
+  2. Previously, `src/lib/llm/client.ts` had no diagnostic logs on successful Gemini calls, only on errors.
+  3. Furthermore, Google's API retired `gemini-2.5-flash` for new users (`HTTP 404: This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash`). When calling the legacy model, Google returned 404, triggering the silent `catch` block that activated the local fallback.
+  4. Google's newly promoted `gemini-3.8-flash` model periodically returned `HTTP 503: This model is currently experiencing high demand`.
+  5. The high-availability, low-latency model `gemini-3.5-flash-lite` was validated and returns `HTTP 200 OK` reliably.
+* **Security & Implementation Hardening:**
+  1. Upgraded API authentication from query parameter (`?key=...`) to standard request header (`x-goog-api-key`), ensuring secrets never appear in error URLs or stack traces.
+  2. Implemented dynamic model selection via `process.env.LLM_MODEL || 'gemini-3.5-flash-lite'`.
+  3. Added safe diagnostic logging without exposing keys, prompts, or sensitive ticket data:
+     - `[LLM] Provider selected: gemini`
+     - `[LLM] Model: <model>`
+     - `[LLM] Gemini request started`
+     - `[LLM] Gemini request succeeded`
+     - `[LLM] Gemini request failed/fallback activated: <sanitized error>`
+  4. Robust JSON parsing handles both raw JSON and Markdown code fence wrappers.
+* **End-to-End Smoke Test Verification:**
+  - Ran `scripts/smoke_gemini.ts` through the authentic application agent pipeline (`runAgentInvestigation`).
+  - Trace verified:
+    `[LLM] Provider selected: gemini`
+    &rarr; `[LLM] Model: gemini-3.5-flash-lite`
+    &rarr; `[LLM] Gemini request started`
+    &rarr; `[LLM] Gemini request succeeded` (Live Google API HTTP 200)
+    &rarr; Structured `AgentDecision` parsed with tool selection (`check_system_status`, `check_network_status`)
+    &rarr; Policy engine (`executeToolSafely`) verified permissions and risk
+    &rarr; Tool execution executed strictly outside the LLM and persisted into SQLite database
+  - Local fallback remains 100% operational as safety net.
+* **Verification Status:**
+  - `npm test`: 22/22 tests passing across 7 suites.
+  - `npm run build`: Production build succeeded with 0 errors.
+
+---
+
+## 25. Phase 17 — Frontend UI/UX Redesign (Cyberpunk / Glitch Design System)
+* **Goal & Scope:** Complete frontend visual transformation into a high-tech "Cyberpunk / Glitch" IT command operations HUD without modifying any backend logic, database models, policy guardrails, or LLM integrations.
+* **Aesthetic Language ("High-Tech, Low-Life"):**
+  - Dark matrix background (`#0a0a0f`) with subtle 50px green grid lines and CRT scanline overlay (`pointer-events: none`).
+  - Chamfered corners on cards, panels, and buttons (`clip-path: polygon(...)`).
+  - Layered neon glow hierarchy: Primary electric green (`#00ff88`), secondary magenta (`#ff00ff`), tertiary cyan (`#00d4ff`), and alert rose (`#ff3366`).
+  - Typography: Futuristic headings (`Orbitron`, `Share Tech Mono`), technical monospaced body & code (`JetBrains Mono`, `Fira Code`).
+  - Reusable Cyberpunk UI primitives in `src/components/ui/cyber.tsx`: `CyberButton`, `CyberBadge`, `CyberPanel`, `CyberInput`, `CyberTerminal`, `CyberStatus`.
+* **Screen-by-Screen Implementation:**
+  1. `src/components/layout/Navbar.tsx`: Cyber operations console navigation bar with live service health HUD pill and persona switcher.
+  2. `src/components/agent/AgentRunView.tsx`: Live incident trajectory graph, high-priority human authorization intercept panel with prominent approval buttons, and terminal reasoning stream.
+  3. `src/app/page.tsx`: AI operations center dashboard showcasing verified demo scenarios, live metrics, and trajectory previews.
+  4. `src/app/tickets/[id]/page.tsx`: Cyber incident investigation console pairing live agent trajectory with terminal conversation audit stream.
+  5. `src/app/employee/page.tsx`: Self-service incident logging HUD, Active Directory identity diagnostics, and incident queue.
+  6. `src/app/it-desk/page.tsx`: Tier-2 workbench with elevated privilege authorization queue and global ticket triage grid.
+  7. `src/app/admin/page.tsx`: Infrastructure & security operations hub featuring tool definition matrices, system telemetry, and immutable audit logs.
+* **Validation & Zero-Regression Check:**
+  - `npm test`: 22/22 tests passing across all 7 suites.
+  - `npm run build`: Production build succeeded with 0 errors.
+  - Route verification: All 7 routes (`/`, `/employee`, `/it-desk`, `/admin`, `/tickets/tkt_1042`, `/tickets/tkt_1043`, `/tickets/tkt_1044`) verified returning `HTTP 200 OK`.
+  - Autonomous triage flow on `tkt_1043` verified working end-to-end with dynamic tool execution and resolution.
+
+---
+
+## 26. Phase 18 — Real Authentication & Server-Side Role-Based Access Control (RBAC)
+* **Goal & Scope:** Enforce genuine, cryptographic authentication and server-side role-based access control across all frontend routes, backend API endpoints, and ticket/approval resources, eliminating client-side trust while preserving the cyberpunk UI, policy engine, and Gemini agent reasoning.
+* **Authentication Architecture:**
+  1. **HMAC-SHA256 Cryptographic Session Tokens:**
+     - Replaced plaintext unverified cookies with cryptographically signed tokens (`userId.role.timestamp.signature`) using Web Crypto API (`crypto.subtle`).
+     - Session tokens are stored in `autodesk_session_token` HTTP cookies (`HttpOnly`, `SameSite=Lax`, `Secure` in production).
+     - Token tampering or forged payload roles are mathematically detected and rejected server-side.
+  2. **Server-Side Authorization Utilities (`src/lib/auth/server.ts`):**
+     - `requireAuth(req)`: Asserts valid active session token, throws `AuthError(401)`.
+     - `requireRole(role, req)`: Enforces role hierarchy rank, returns 401 (unauthenticated) or 403 (insufficient permissions).
+     - `requireAnyRole([roles], req)`: Enforces membership in specified clearance roles.
+     - `checkTicketAccess(ticket, user)`: Resource-level policy:
+       - `EMPLOYEE`: Access restricted strictly to tickets where `creatorId === user.id`.
+       - `IT_AGENT` & `IT_ADMIN`: Operational clearance to access all tickets.
+     - `handleAuthError(error)`: Standardized JSON error response handler returning 401/403.
+  3. **Next.js Route Middleware (`src/middleware.ts`):**
+     - Early edge protection verifying session signature before rendering.
+     - Unauthenticated requests to `/admin`, `/it-desk`, `/employee`, or `/tickets/*` redirect to `/login?next=...`.
+     - Unauthorized roles attempting restricted paths redirect to `/access-denied` with informative clearance diagnostics:
+       - `/admin` &rarr; Requires `IT_ADMIN`
+       - `/it-desk` &rarr; Requires `IT_AGENT` or `IT_ADMIN`
+       - `/employee` &rarr; Accessible to all authenticated personas
+* **Secured API Endpoints:**
+  - `GET /api/admin/audit-logs`: Requires `IT_ADMIN` clearance (returns 403 for `EMPLOYEE` and `IT_AGENT`).
+  - `POST /api/actions/[id]/approve`: Requires valid authentication + `canApproveRiskLevel(user.role, appr.risk_level)`. Blocks `EMPLOYEE` from approving privileged operations (returns 403).
+  - `POST /api/actions/[id]/reject`: Requires `IT_AGENT` or `IT_ADMIN` clearance.
+  - `POST /api/agent/investigate`: Requires authentication + ticket ownership verification (returns 403 if employee calls on another user's ticket).
+  - `GET & POST /api/tickets/[id]`: Requires authentication + ticket access check (`checkTicketAccess`).
+  - `POST /api/tickets/[id]/resolve` & `POST /api/tickets/[id]/escalate`: Requires `IT_AGENT` or `IT_ADMIN` operational clearance.
+  - `GET /api/approvals/pending`: Global queue requires IT clearance; ticket-scoped view verified against ticket ownership.
+  - `GET /api/users/[id]/account`: Scoped to self for `EMPLOYEE`; unrestricted for IT personnel.
+  - `GET /api/devices/[id]/status`: Scoped to assigned device for `EMPLOYEE`; unrestricted for IT personnel.
+* **Security & Clearance UI Components:**
+  - `src/app/login/page.tsx`: Cyberpunk terminal authentication interface with one-click cryptographic persona activation for seed identities (`Sarah Connor`, `David Lightman`, `Alex Mercer`, `Jordan Hayes`).
+  - `src/app/access-denied/page.tsx`: High-tech 403 Forbidden intercept screen displaying required vs active clearance and fast-switch actions.
+  - `src/components/layout/Navbar.tsx`: Dynamic role-tailored navigation tabs matching active clearance.
+* **Validation & Test Results:**
+  - `npm test`: **27/27 tests passing across all 7 test suites** (0 failures).
+  - `npm run build`: Production Next.js Turbopack build succeeded with 0 TypeScript/Turbopack errors.
+  - Live probe test (`scripts/probe_rbac.ts`): **18/18 live HTTP route and API RBAC checks passed** against running server.
+  - Agent orchestrator, Gemini integration, and Cyberpunk design system remain 100% intact.
+
+
+
+

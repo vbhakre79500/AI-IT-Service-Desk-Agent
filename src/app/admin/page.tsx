@@ -14,9 +14,18 @@ import {
   Terminal,
   Lock,
   Search,
-  ExternalLink
+  ExternalLink,
+  Cpu,
+  Radio,
+  Server
 } from 'lucide-react';
 import { SystemStatus, AuditLog } from '@/types';
+import { 
+  CyberButton, 
+  CyberBadge, 
+  CyberPanel, 
+  CyberStatus 
+} from '@/components/ui/cyber';
 
 export default function AdminHubPage() {
   const { user } = useAuth();
@@ -52,39 +61,40 @@ export default function AdminHubPage() {
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 font-mono">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#2a2a3a] pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
-              ENTERPRISE SECURITY & INFRASTRUCTURE ADMIN
+            <span className="text-xs font-bold px-2 py-0.5 bg-[#ff00ff]/10 text-[#ff00ff] border border-[#ff00ff]/30">
+              SECURITY OPERATIONS &amp; INFRASTRUCTURE ADMIN HUD
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
-            IT Operations & Administration Hub
+          <h1 className="text-2xl sm:text-3xl font-heading font-black text-white mt-1">
+            IT Operations &amp; Administration Hub
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Manage registered agent tools, inspect system health, verify SOP runbooks, and audit immutable security logs.
+          <p className="text-xs text-[#a0a0b0] mt-1">
+            Manage registered agent tools, monitor enterprise service health, audit security logs, and verify SOP runbooks.
           </p>
         </div>
 
-        <button
+        <CyberButton
+          variant="outline"
           onClick={fetchAdminData}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl glass-panel text-xs text-slate-300 hover:text-white transition-colors"
+          className="min-h-[44px]"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Registry
-        </button>
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>REFRESH REGISTRY</span>
+        </CyberButton>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto">
+      {/* Cyber Tabs Navigation */}
+      <div className="flex items-center gap-2 border-b border-[#2a2a3a] pb-3 overflow-x-auto text-xs">
         {[
-          { id: 'tools', label: `Agent Tool Registry (${tools.length})`, icon: Terminal },
-          { id: 'services', label: `Enterprise Services (${services.length})`, icon: Activity },
-          { id: 'audit', label: `Security Audit Logs (${auditLogs.length})`, icon: ShieldCheck },
-          { id: 'knowledge', label: 'RAG Knowledge SOPs', icon: FileText },
+          { id: 'tools', label: `AGENT TOOL REGISTRY (${tools.length})`, icon: Terminal },
+          { id: 'services', label: `ENTERPRISE SERVICES (${services.length})`, icon: Activity },
+          { id: 'audit', label: `IMMUTABLE AUDIT LOGS (${auditLogs.length})`, icon: ShieldCheck },
+          { id: 'knowledge', label: 'RAG KNOWLEDGE SOPS', icon: FileText },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -92,14 +102,14 @@ export default function AdminHubPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2 px-4 py-2 font-bold uppercase tracking-wider transition-all shrink-0 border ${
                 isActive
-                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
-                  : 'glass-panel text-slate-400 hover:text-white'
+                  ? 'bg-[#00ff88]/15 border-[#00ff88] text-[#00ff88] shadow-[0_0_10px_rgba(0,255,136,0.25)]'
+                  : 'bg-[#12121a] border-[#2a2a3a] text-[#6b7280] hover:text-[#e0e0e0]'
               }`}
             >
-              <Icon className="w-4 h-4" />
-              {tab.label}
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
             </button>
           );
         })}
@@ -108,121 +118,125 @@ export default function AdminHubPage() {
       {/* TAB 1: Registered Tools */}
       {activeTab === 'tools' && (
         <div className="space-y-4">
-          <div className="glass-panel rounded-3xl border border-slate-800/80 overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900/80 text-slate-400 font-mono text-[11px] uppercase border-b border-slate-800">
-                <tr>
-                  <th className="py-3.5 px-4">Tool Name</th>
-                  <th className="py-3.5 px-4">Description</th>
-                  <th className="py-3.5 px-4">Risk Level</th>
-                  <th className="py-3.5 px-4">Approval Policy</th>
-                  <th className="py-3.5 px-4">Permitted Role</th>
-                  <th className="py-3.5 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300 font-sans">
-                {tools.map((tool) => (
-                  <tr key={tool.name} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-cyan-400">{tool.name}</td>
-                    <td className="py-3.5 px-4 text-xs text-slate-300 max-w-sm">{tool.description}</td>
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2 py-0.5 rounded font-mono font-bold text-[10px] ${
-                        tool.riskLevel === 'HIGH'
-                          ? 'bg-rose-500/20 text-rose-300'
-                          : tool.riskLevel === 'MEDIUM'
-                          ? 'bg-amber-500/20 text-amber-300'
-                          : 'bg-emerald-500/20 text-emerald-300'
-                      }`}>
-                        {tool.riskLevel}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-[11px]">
-                      {tool.requiresApproval ? (
-                        <span className="text-amber-400 font-bold">REQUIRED</span>
-                      ) : (
-                        <span className="text-slate-500">Autonomous</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-[11px] text-slate-400">{tool.requiredRole}</td>
-                    <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400">
-                        ENABLED
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase text-[#00ff88] tracking-widest">
+              // REGISTERED AI TOOL DEFINITIONS &amp; RISK LEVEL MATRIX
+            </h2>
+            <span className="text-[10px] text-[#6b7280]">POLICY ENFORCEMENT: 100%</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {tools.map((t) => (
+              <div
+                key={t.name}
+                className="bg-[#12121a] border border-[#2a2a3a] p-4 cyber-chamfer-sm space-y-2 hover:border-[#00ff88] transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white font-mono">
+                    {t.name}
+                  </span>
+                  <CyberBadge
+                    variant={
+                      t.riskLevel === 'HIGH' || t.riskLevel === 'CRITICAL'
+                        ? 'red'
+                        : t.riskLevel === 'MEDIUM'
+                        ? 'amber'
+                        : 'green'
+                    }
+                  >
+                    RISK: {t.riskLevel}
+                  </CyberBadge>
+                </div>
+
+                <p className="text-xs text-[#a0a0b0]">
+                  {t.description}
+                </p>
+
+                <div className="pt-2 border-t border-[#2a2a3a] flex items-center justify-between text-[10px] text-[#6b7280]">
+                  <span>CATEGORY: {t.category || 'DIAGNOSTIC'}</span>
+                  <span className={t.requiresApproval ? 'text-[#ff00ff] font-bold' : 'text-[#00ff88]'}>
+                    {t.requiresApproval ? 'REQUIRES HUMAN AUTHORIZATION' : 'AUTONOMOUS EXECUTION PERMITTED'}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* TAB 2: Enterprise Services Status */}
+      {/* TAB 2: Enterprise Services Health */}
       {activeTab === 'services' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {services.map((srv) => (
-            <div
-              key={srv.id}
-              className="glass-panel rounded-2xl p-5 border border-slate-800/80 space-y-3"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs text-cyan-400">{srv.serviceName}</span>
-                <span className={`px-2 py-0.5 rounded-full font-mono font-bold text-[10px] ${
-                  srv.status === 'OPERATIONAL'
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : srv.status === 'DEGRADED'
-                    ? 'bg-amber-500/20 text-amber-400'
-                    : 'bg-rose-500/20 text-rose-400'
-                }`}>
-                  {srv.status}
-                </span>
-              </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase text-[#00ff88] tracking-widest">
+              // CORE ENTERPRISE SYSTEM HEALTH &amp; TELEMETRY
+            </h2>
+          </div>
 
-              <div>
-                <h3 className="font-bold text-white text-sm">{srv.displayName}</h3>
-                <p className="text-xs text-slate-400 mt-1">{srv.incidentNotes}</p>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {services.map((s) => (
+              <div
+                key={s.id}
+                className="bg-[#12121a] border border-[#2a2a3a] p-4 cyber-chamfer-sm space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-white font-mono uppercase">
+                    {s.serviceName}
+                  </span>
+                  <CyberStatus status={s.status as any} />
+                </div>
 
-              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-500 font-mono">
-                <span>Latency: {srv.latencyMs}ms</span>
-                <span>Checked: Just now</span>
+                <div className="space-y-1 text-xs">
+                  <p className="text-[#a0a0b0]">{s.displayName || s.serviceName}</p>
+                  <div className="flex items-center justify-between text-[10px] text-[#6b7280] pt-2 border-t border-[#2a2a3a]">
+                    <span>STATUS: {s.status}</span>
+                    <span>LATENCY: {s.latencyMs || '0'}MS</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
       {/* TAB 3: Immutable Audit Logs */}
       {activeTab === 'audit' && (
         <div className="space-y-4">
-          <div className="glass-panel rounded-3xl border border-slate-800/80 overflow-hidden">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase text-[#00ff88] tracking-widest">
+              // IMMUTABLE SECURITY &amp; EXECUTION AUDIT TRAIL ({auditLogs.length})
+            </h2>
+            <span className="text-[10px] text-[#6b7280]">TAMPER-PROOF SQLite PERSISTENCE</span>
+          </div>
+
+          <div className="bg-[#12121a] border border-[#2a2a3a] overflow-x-auto cyber-chamfer">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900/80 text-slate-400 font-mono text-[11px] uppercase border-b border-slate-800">
+              <thead className="bg-[#0a0a0f] border-b border-[#2a2a3a] text-[#6b7280] uppercase text-[10px]">
                 <tr>
-                  <th className="py-3.5 px-4">Timestamp</th>
-                  <th className="py-3.5 px-4">Action</th>
-                  <th className="py-3.5 px-4">Resource</th>
-                  <th className="py-3.5 px-4">Risk Level</th>
-                  <th className="py-3.5 px-4">Details</th>
+                  <th className="p-3">TIMESTAMP</th>
+                  <th className="p-3">ACTION</th>
+                  <th className="p-3">RESOURCE</th>
+                  <th className="p-3">ACTOR</th>
+                  <th className="p-3">DETAILS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono text-slate-300">
+              <tbody className="divide-y divide-[#2a2a3a]">
                 {auditLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3.5 px-4 text-slate-400">
+                  <tr key={log.id} className="hover:bg-[#1c1c2e]/40 transition-colors">
+                    <td className="p-3 text-[#6b7280] whitespace-nowrap">
                       {new Date(log.createdAt).toLocaleTimeString()}
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-white">{log.action}</td>
-                    <td className="py-3.5 px-4 text-cyan-400">{log.resource}</td>
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        log.riskLevel === 'HIGH' ? 'bg-rose-500/20 text-rose-300' : 'bg-slate-800 text-slate-300'
-                      }`}>
-                        {log.riskLevel}
-                      </span>
+                    <td className="p-3 font-bold text-[#00d4ff] whitespace-nowrap">
+                      {log.action}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-400 truncate max-w-xs">
-                      {JSON.stringify(log.details)}
+                    <td className="p-3 text-[#00ff88] whitespace-nowrap font-bold">
+                      {log.resource || '-'}
+                    </td>
+                    <td className="p-3 text-white whitespace-nowrap">
+                      {log.userId || 'agent_ai'}
+                    </td>
+                    <td className="p-3 text-[#a0a0b0] truncate max-w-xs">
+                      {typeof log.details === 'object' ? JSON.stringify(log.details) : String(log.details || '-')}
                     </td>
                   </tr>
                 ))}
@@ -232,28 +246,40 @@ export default function AdminHubPage() {
         </div>
       )}
 
-      {/* TAB 4: Knowledge SOPs */}
+      {/* TAB 4: RAG Knowledge SOPs */}
       {activeTab === 'knowledge' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[
-            { id: 'SOP-104', title: 'HR Portal Access & Authentication Failure Resolution', cat: 'Authentication' },
-            { id: 'SOP-209', title: 'GlobalProtect VPN Connection Failure & Gateway Timeout', cat: 'VPN' },
-            { id: 'SOP-301', title: 'Enterprise Password Reset & Account Lockout Policy', cat: 'Password' },
-            { id: 'SOP-999', title: 'Infrastructure Outages and Tier-3 Escalation Protocol', cat: 'Other' },
-          ].map((sop) => (
-            <div key={sop.id} className="glass-panel rounded-2xl p-5 border border-slate-800/80 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-cyan-400">{sop.id}</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                  {sop.cat}
-                </span>
-              </div>
-              <h3 className="font-bold text-white text-sm">{sop.title}</h3>
-              <p className="text-xs text-slate-400">
-                Vector indexed in knowledge_chunks with 128-dim dense embeddings. Protected against prompt injection overrides via safety wrapper.
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase text-[#00ff88] tracking-widest">
+              // EMBEDDED IT SOP RUNBOOKS &amp; COSINE VECTOR SIMILARITY
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[#12121a] border border-[#2a2a3a] p-4 cyber-chamfer-sm space-y-2">
+              <CyberBadge variant="cyan">SOP-104</CyberBadge>
+              <h3 className="font-heading font-bold text-white text-sm">HR Portal Auth Triage</h3>
+              <p className="text-xs text-[#a0a0b0]">
+                Covers authentication handshakes, Active Directory account lockout flags, and unlock authorization procedures.
               </p>
             </div>
-          ))}
+
+            <div className="bg-[#12121a] border border-[#2a2a3a] p-4 cyber-chamfer-sm space-y-2">
+              <CyberBadge variant="green">SOP-209</CyberBadge>
+              <h3 className="font-heading font-bold text-white text-sm">GlobalProtect VPN Triage</h3>
+              <p className="text-xs text-[#a0a0b0]">
+                Addresses TLS handshake timeouts, client software version mismatch, and application cache flushing.
+              </p>
+            </div>
+
+            <div className="bg-[#12121a] border border-[#2a2a3a] p-4 cyber-chamfer-sm space-y-2">
+              <CyberBadge variant="red">SOP-999</CyberBadge>
+              <h3 className="font-heading font-bold text-white text-sm">Infrastructure Outage Escalation</h3>
+              <p className="text-xs text-[#a0a0b0]">
+                Defines boundaries for L1 agent vs Tier-3 DevOps handoff when internal Git/microservice clusters fail.
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateTicketStatus, addTicketMessage, getTicketById, recordAuditLog } from '@/lib/db/queries';
-import { getAuthenticatedUser } from '@/lib/auth/session';
+import { requireAnyRole, handleAuthError } from '@/lib/auth/server';
 import { z } from 'zod';
 
 const EscalateSchema = z.object({
@@ -14,7 +14,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const user = await getAuthenticatedUser();
+    const user = await requireAnyRole(['IT_AGENT', 'IT_ADMIN'], req);
     const body = await req.json().catch(() => ({}));
     const validated = EscalateSchema.parse(body);
 
@@ -49,9 +49,13 @@ export async function POST(
       message: `Ticket ${ticket.ticketNumber} escalated to ${validated.targetTier}.`,
     });
   } catch (error: any) {
+    const authResp = handleAuthError(error);
+    if (authResp) return authResp;
+
     return NextResponse.json(
       { success: false, error: error.message || 'Escalation failed' },
       { status: 500 }
     );
   }
 }
+

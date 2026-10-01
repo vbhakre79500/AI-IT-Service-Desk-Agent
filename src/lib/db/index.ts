@@ -2,8 +2,9 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
 
-const DB_DIR = path.resolve(process.cwd(), 'data');
-const DB_PATH = path.resolve(DB_DIR, 'autodesk.db');
+const customPath = process.env.DATABASE_PATH || './data/autodesk.db';
+const DB_PATH = path.isAbsolute(customPath) ? customPath : path.resolve(/*turbopackIgnore: true*/ process.cwd(), customPath);
+const DB_DIR = path.dirname(DB_PATH);
 
 // Ensure data directory exists
 if (!fs.existsSync(DB_DIR)) {

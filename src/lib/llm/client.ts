@@ -35,31 +35,49 @@ export async function getNextAgentDecision(context: LLMDecisionContext): Promise
   const provider = process.env.LLM_PROVIDER || (process.env.GEMINI_API_KEY ? 'gemini' : process.env.OPENAI_API_KEY ? 'openai' : 'local');
 
   if (provider === 'gemini' && process.env.GEMINI_API_KEY) {
+    const model = process.env.LLM_MODEL || 'gemini-3.5-flash-lite';
+    console.log(`[LLM] Provider selected: gemini`);
+    console.log(`[LLM] Model: ${model}`);
+    console.log(`[LLM] Gemini request started`);
     try {
-      return await callGeminiLLM(context);
-    } catch (err) {
-      console.warn('⚠️ Gemini API call failed, falling back to local reasoning engine:', err);
+      const decision = await callGeminiLLM(context, model);
+      console.log(`[LLM] Gemini request succeeded`);
+      return decision;
+    } catch (err: any) {
+      console.warn(`[LLM] Gemini request failed/fallback activated: ${err?.message || 'Unknown error'}`);
     }
   }
 
   if (provider === 'openai' && process.env.OPENAI_API_KEY) {
+    const model = process.env.LLM_MODEL || 'gpt-4o-mini';
+    console.log(`[LLM] Provider selected: openai`);
+    console.log(`[LLM] Model: ${model}`);
+    console.log(`[LLM] OpenAI request started`);
     try {
-      return await callOpenAILLM(context);
-    } catch (err) {
-      console.warn('⚠️ OpenAI API call failed, falling back to local reasoning engine:', err);
+      const decision = await callOpenAILLM(context);
+      console.log(`[LLM] OpenAI request succeeded`);
+      return decision;
+    } catch (err: any) {
+      console.warn(`[LLM] OpenAI request failed/fallback activated: ${err?.message || 'Unknown error'}`);
     }
   }
 
   // Local ReAct dynamic reasoning engine (determines next action based on evidence graph)
+  console.log(`[LLM] Provider selected: local (fallback reasoning engine)`);
   return runLocalDynamicReasoning(context);
 }
 
 /**
  * Real Gemini API caller using Google GenAI endpoint with structured JSON output
  */
-async function callGeminiLLM(ctx: LLMDecisionContext): Promise<AgentDecision> {
+async function callGeminiLLM(ctx: LLMDecisionContext, modelName?: string): Promise<AgentDecision> {
   const apiKey = process.env.GEMINI_API_KEY;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+
+  const model = modelName || process.env.LLM_MODEL || 'gemini-3.5-flash-lite';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const systemInstruction = `
 You are the AutoDesk AI Autonomous IT Helpdesk Resolution Agent.
@@ -100,7 +118,10 @@ Return a valid JSON object matching:
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify({
       contents: [{ parts: [{ text: userPrompt }] }],
       systemInstruction: { parts: [{ text: systemInstruction }] },
@@ -112,12 +133,18 @@ Return a valid JSON object matching:
   });
 
   if (!res.ok) {
-    throw new Error(`Gemini API error ${res.status}: ${await res.text()}`);
+    const errorText = await res.text();
+    throw new Error(`Gemini API returned status ${res.status}: ${errorText.slice(0, 180)}`);
   }
 
   const data = await res.json();
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  return JSON.parse(rawText);
+  if (!rawText) {
+    throw new Error('Gemini API returned empty candidate response');
+  }
+
+  const cleanJson = rawText.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+  return JSON.parse(cleanJson);
 }
 
 /**

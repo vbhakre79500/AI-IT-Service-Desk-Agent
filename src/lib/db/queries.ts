@@ -111,9 +111,12 @@ export function createTicket(data: {
 }): Ticket {
   const db = getDatabase();
   const countRow = db.prepare('SELECT COUNT(*) as count FROM tickets').get() as any;
-  const num = 1040 + (countRow?.count || 0) + 1;
+  let num = 1040 + (countRow?.count || 0) + 1;
+  while (db.prepare('SELECT 1 FROM tickets WHERE ticket_number = ?').get(`INC-${num}`)) {
+    num += 1;
+  }
   const ticketNumber = `INC-${num}`;
-  const id = `tkt_${Date.now()}`;
+  const id = `tkt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
   db.prepare(`
     INSERT INTO tickets (id, ticket_number, creator_id, title, description, category, priority, status, device_id, error_code)
